@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Deadswitch</title>
+<style>
+  :root { --bg:#0b0e14; --panel:#11151f; --line:#1f2637; --text:#c8d3e8; --dim:#5c6a85;
+          --green:#3ddc84; --red:#ff4d5e; --amber:#ffb454; --blue:#59a7ff; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font:14px/1.5 "SF Mono","JetBrains Mono",Menlo,monospace; padding:24px; }
+  h1 { font-size:20px; letter-spacing:2px; }
+  h1 .skull { color:var(--red); }
+  .sub { color:var(--dim); margin:4px 0 20px; font-size:12px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:1100px; }
+  .pane { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px; }
+  .pane h2 { font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px; }
+  .chain-tag { float:right; font-size:10px; padding:2px 8px; border-radius:10px; border:1px solid var(--line); color:var(--blue); }
+  .big { font-size:32px; font-weight:bold; margin:8px 0; }
+  .row { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px dotted var(--line); font-size:13px; }
+  .row span:first-child { color:var(--dim); }
+  .status-active { color:var(--green); }
+  .status-liquidated { color:var(--red); animation:pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity:0.4; } }
+  .attest { grid-column:1/3; }
+  .bar-wrap { background:var(--bg); border:1px solid var(--line); border-radius:4px; height:18px; overflow:hidden; margin:8px 0; }
+  .bar { background:var(--blue); height:100%; transition:width 1s; }
+  .feed { grid-column:1/3; max-height:260px; overflow-y:auto; }
+  .feed div { padding:2px 0; font-size:12px; }
+  .t { color:var(--dim); margin-right:8px; }
+  .k-event { color:var(--blue); } .k-wait { color:var(--amber); } .k-proof { color:var(--amber); }
+  .k-kill { color:var(--red); font-weight:bold; } .k-done { color:var(--green); }
+  .k-error { color:var(--red); } .k-action { color:var(--text); } .k-info { color:var(--dim); }
+  .controls { margin-top:12px; display:flex; gap:8px; }
+  input { background:var(--bg); border:1px solid var(--line); color:var(--text); padding:6px 10px; border-radius:4px; width:90px; font:inherit; }
+  button { background:var(--red); color:#fff; border:0; padding:6px 14px; border-radius:4px; font:inherit; cursor:pointer; }
+  button:disabled { opacity:0.4; cursor:default; }
+  .addr { font-size:11px; color:var(--dim); word-break:break-all; margin-top:8px; }
+</style>
+</head>
+<body>
+<h1>DEADSWITCH <span class="skull">💀</span></h1>
+<div class="sub">a loan that dies when its collateral moves on another chain — no bridge, no relayer, no price feed</div>
+<div class="grid">
+  <div class="pane">
+    <h2>Collateral Vault <span class="chain-tag">SEPOLIA</span></h2>
+    <div class="big" id="vault-balance">–</div>
+    <div class="row"><span>position</span><span id="pos-id">–</span></div>
+    <div class="row"><span>owner</span><span id="vault-owner">–</span></div>
+    <div class="controls">
+      <input id="amount" value="10" /> <button id="withdraw">withdraw</button>
+    </div>
+    <div class="addr" id="vault-addr"></div>
+  </div>
+  <div class="pane">
+    <h2>Debt Position <span class="chain-tag">CREDITCOIN</span></h2>
+    <div class="big" id="pos-status">–</div>
+    <div class="row"><span>debt</span><span id="pos-debt">–</span></div>
+    <div class="row"><span>min collateral</span><span id="pos-min">–</span></div>
+    <div class="row"><span>last attested collateral</span><span id="pos-attested">–</span></div>
+    <div class="addr" id="mgr-addr"></div>
+  </div>
+  <div class="pane attest">
+    <h2>Attestcoin Oracle — attestation progress</h2>
+    <div class="row"><span>latest attested Sepolia height</span><span id="att-height">–</span></div>
+    <div class="row"><span>current Sepolia height</span><span id="src-height">–</span></div>
+    <div class="row"><span>pending proof</span><span id="pending">none</span></div>
+    <div class="bar-wrap"><div class="bar" id="bar" style="width:0%"></div></div>
+    <div class="sub">the oracle deliberately waits for finality before any proof is accepted — this is what makes the liquidation reorg-safe</div>
+  </div>
+  <div class="pane feed"><h2>Keeper feed</h2><div id="feed"></div></div>
+</div>
+<script>
+const fmt = (wei) => (Number(BigInt(wei) / 10n**14n) / 10000).toFixed(2);
+const short = (a) => a ? a.slice(0,8) + '…' + a.slice(-6) : '–';
+async function tick() {
+  try {
+    const s = await (await fetch('/api/status')).json();
+    document.getElementById('vault-balance').textContent = fmt(s.vault.balance) + ' TST';
+    document.getElementById('vault-owner').textContent = short(s.vault.owner);
+    document.getElementById('pos-id').textContent = '#' + s.positionId;
+    document.getElementById('vault-addr').textContent = s.addresses.vault;
+    document.getElementById('mgr-addr').textContent = s.addresses.manager;
+    const st = s.position.status;
+    const el = document.getElementById('pos-status');
+    el.textContent = st === 0 ? 'ACTIVE' : st === 1 ? 'LIQUIDATED' : 'CLOSED';
+    el.className = 'big ' + (st === 1 ? 'status-liquidated' : 'status-active');
+    document.getElementById('pos-debt').textContent = fmt(s.position.debt) + ' TST';
+    document.getElementById('pos-min').textContent = fmt(s.position.minCollateral) + ' TST';
+    document.getElementById('pos-attested').textContent = s.position.lastAttested === '0' ? 'never' : fmt(s.position.lastAttested) + ' TST';
+    document.getElementById('att-height').textContent = s.attestation.latestAttestedHeight;
+    document.getElementById('src-height').textContent = s.attestation.sourceHeight;
+    const p = s.attestation.pending;
+    document.getElementById('pending').textContent = p ? `block ${p.block} (${p.txHash.slice(0,10)}…)` : 'none';
+    let pct = 100;
+    if (p && p.block > s.attestation.latestAttestedHeight) {
+      const gap = p.block - s.attestation.latestAttestedHeight;
+      pct = Math.max(5, 100 - gap * 2);
+    }
+    document.getElementById('bar').style.width = pct + '%';
+    document.getElementById('feed').innerHTML = s.feed.slice().reverse().map(f =>
+      `<div><span class="t">${new Date(f.t).toLocaleTimeString()}</span><span class="k-${f.kind}">${f.msg}</span></div>`).join('');
+  } catch (e) { /* server restarting */ }
+}
+document.getElementById('withdraw').onclick = async () => {
+  const btn = document.getElementById('withdraw');
+  btn.disabled = true;
+  try {
+    await fetch('/api/withdraw', { method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({ amount: document.getElementById('amount').value }) });
+  } finally { btn.disabled = false; }
+};
+setInterval(tick, 4000); tick();
+</script>
+</body>
+</html>
