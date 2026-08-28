@@ -45,7 +45,17 @@ async function keeper(txHash: string, block: number) {
   pendingProof = { txHash, block };
   log(`Withdrawal ${txHash.slice(0, 10)}… in Sepolia block ${block}. Waiting for attestation…`, 'wait');
   try {
-    await proofBuilder.waitUntilHeightAttested(chainKey, block, 15_000, 1_200_000);
+    // Prover-service polls can time out transiently; a keeper must survive that.
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await proofBuilder.waitUntilHeightAttested(chainKey, block, 15_000, 1_200_000);
+        break;
+      } catch (e: any) {
+        if (attempt >= 5) throw e;
+        log(`Attestation poll failed (attempt ${attempt}/5), retrying in 30s: ${e.message ?? e}`, 'wait');
+        await new Promise((r) => setTimeout(r, 30_000));
+      }
+    }
     log(`Block ${block} attested. Generating proof…`, 'proof');
     const proofRes = await proofBuilder.getProof(txHash);
     if (!proofRes.success) throw new Error(`Proof generation failed: ${proofRes.error}`);
@@ -83,7 +93,7 @@ const seenTxs = new Set<string>();
 async function scanWithdrawals() {
   try {
     const head = await srcProvider.getBlockNumber();
-    if (lastScanned === 0) lastScanned = head; // start at head; history is not our business
+    if (lastScanned === 0) lastScanned = Number(process.env.RESCAN_FROM ?? 0) || head;
     if (head <= lastScanned) return;
     const events = await vault.queryFilter(vault.filters.CollateralWithdrawn(), lastScanned + 1, head);
     lastScanned = head;
