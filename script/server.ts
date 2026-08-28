@@ -72,7 +72,7 @@ async function keeper(txHash: string, block: number) {
       try {
         const parsed = manager.interface.parseLog(l);
         if (parsed?.name === 'PositionLiquidated') {
-          log(`💀 PositionLiquidated: remaining ${ethers.formatEther(parsed.args[1])} < min ${ethers.formatEther(parsed.args[2])}`, 'kill');
+          log(`PositionLiquidated: remaining ${ethers.formatEther(parsed.args[1])} < min ${ethers.formatEther(parsed.args[2])}`, 'kill');
         } else if (parsed) {
           log(`Event: ${parsed.name}`, 'event');
         }
