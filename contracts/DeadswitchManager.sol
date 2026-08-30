@@ -18,7 +18,8 @@ import {USCBase} from "./USCBase.sol";
  */
 contract DeadswitchManager is Ownable, ReentrancyGuard, USCBase {
     enum DeadswitchActions {
-        CollateralWithdrawn // 0
+        CollateralWithdrawn, // 0
+        CollateralDeposited  // 1 — top-up that can rescue a position
     }
     error InvalidAction(uint8 action);
 
@@ -40,6 +41,9 @@ contract DeadswitchManager is Ownable, ReentrancyGuard, USCBase {
     // keccak256("CollateralWithdrawn(uint256,uint256,uint256)")
     bytes32 public constant WITHDRAW_EVENT_SIGNATURE =
         keccak256("CollateralWithdrawn(uint256,uint256,uint256)");
+    // keccak256("CollateralDeposited(uint256,address,uint256,uint256)")
+    bytes32 public constant DEPOSIT_EVENT_SIGNATURE =
+        keccak256("CollateralDeposited(uint256,address,uint256,uint256)");
 
     /// Source-chain vault authorized to emit the events we act on. Any log from
     /// a different address is rejected — otherwise anyone could deploy a fake
@@ -52,6 +56,7 @@ contract DeadswitchManager is Ownable, ReentrancyGuard, USCBase {
     event PositionRegistered(uint256 indexed positionId, address indexed borrower, uint256 debt, uint256 minCollateral);
     event CollateralAttested(uint256 indexed positionId, uint256 withdrawn, uint256 remaining);
     event PositionLiquidated(uint256 indexed positionId, uint256 remainingCollateral, uint256 minCollateral);
+    event PositionRestored(uint256 indexed positionId, uint256 remainingCollateral, uint256 minCollateral);
     event SourceVaultRegistered(address indexed vault);
 
     constructor() Ownable(msg.sender) {}
@@ -94,6 +99,8 @@ contract DeadswitchManager is Ownable, ReentrancyGuard, USCBase {
     function _processAndEmitEvent(uint8 action, bytes32, bytes memory encodedTransaction) internal override {
         if (action == uint8(DeadswitchActions.CollateralWithdrawn)) {
             _processWithdrawal(encodedTransaction);
+        } else if (action == uint8(DeadswitchActions.CollateralDeposited)) {
+            _processDeposit(encodedTransaction);
         } else {
             revert InvalidAction(action);
         }
@@ -138,4 +145,39 @@ contract DeadswitchManager is Ownable, ReentrancyGuard, USCBase {
             emit PositionLiquidated(positionId, remaining, pos.minCollateral);
         }
     }
+
+    function _processDeposit(bytes memory encodedTransaction) internal {
+        uint8 txType = EvmV1Decoder.getTransactionType(encodedTransaction);
+        require(EvmV1Decoder.isValidTransactionType(txType), "Unsupported transaction type");
+
+        // Same status guard as withdrawal: a reverted deposit proves inclusion but
+        // moved no collateral. Restoring on a failed deposit would revive a dead
+        // position that was never actually topped up.
+        EvmV1Decoder.ReceiptFields memory receipt = EvmV1Decoder.decodeReceiptFields(encodedTransaction);
+        require(receipt.receiptStatus == 1, "Source transaction did not succeed");
+
+        EvmV1Decoder.LogEntry[] memory logs = EvmV1Decoder.getLogsByEventSignature(receipt, DEPOSIT_EVENT_SIGNATURE);
+        require(logs.length > 0, "No CollateralDeposited event found");
+        EvmV1Decoder.LogEntry memory log = logs[0];
+
+        require(sourceVault != address(0), "Source vault not registered");
+        require(log.address_ == sourceVault, "Event not emitted by registered vault");
+        require(log.topics.length == 3, "Invalid CollateralDeposited topics");
+        require(log.topics[0] == DEPOSIT_EVENT_SIGNATURE, "Not CollateralDeposited event");
+        require(log.data.length == 64, "Invalid CollateralDeposited data");
+
+        uint256 positionId = uint256(log.topics[1]);
+        (, uint256 remaining) = abi.decode(log.data, (uint256, uint256));
+
+        DebtPosition storage pos = debtPositions[positionId];
+        require(pos.exists, "Unknown position");
+        require(pos.status == PositionStatus.Active, "Position not active");
+
+        pos.lastAttestedCollateral = remaining;
+        emit CollateralAttested(positionId, 0, remaining);
+        // A top-up that lands while still above threshold keeps the position healthy;
+        // this is the borrower's escape hatch against a pending liquidation.
+        emit PositionRestored(positionId, remaining, pos.minCollateral);
+    }
+
 }

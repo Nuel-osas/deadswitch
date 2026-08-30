@@ -12,7 +12,10 @@ dotenv.config({ override: true });
 const VAULT_ABI = [
   'function positions(uint256) view returns (address owner, address token, uint256 balance, bool exists)',
   'function withdraw(uint256 positionId, uint256 amount)',
+  'function deposit(uint256 positionId, uint256 amount)',
+  'function openPosition(uint256 positionId, address token, uint256 amount)',
   'event CollateralWithdrawn(uint256 indexed positionId, uint256 amount, uint256 remaining)',
+  'event CollateralDeposited(uint256 indexed positionId, address indexed owner, uint256 amount, uint256 remaining)',
 ];
 
 const chainKey = Number(process.env.SOURCE_CHAIN_KEY);
@@ -41,9 +44,9 @@ let pendingProof: { txHash: string; block: number } | null = null;
 
 // Permissionless keeper: watch the vault, prove every withdrawal, submit.
 // Anyone on the internet could run this loop — that is the point.
-async function keeper(txHash: string, block: number) {
+async function keeper(txHash: string, block: number, action: number, kind: string) {
   pendingProof = { txHash, block };
-  log(`Withdrawal ${txHash.slice(0, 10)}… in Sepolia block ${block}. Waiting for attestation…`, 'wait');
+  log(`${kind} ${txHash.slice(0, 10)}… in Sepolia block ${block}. Waiting for attestation…`, 'wait');
   try {
     // Prover-service polls can time out transiently; a keeper must survive that.
     for (let attempt = 1; ; attempt++) {
@@ -62,7 +65,7 @@ async function keeper(txHash: string, block: number) {
     const proof = proofRes.data!;
     log('Proof generated. Submitting to DeadswitchManager.execute…', 'proof');
     const tx = await manager.execute(
-      0, proof.chainKey, proof.headerNumber, proof.txBytes,
+      action, proof.chainKey, proof.headerNumber, proof.txBytes,
       proof.merkleProof.root, proof.merkleProof.siblings,
       proof.continuityProof.lowerEndpointDigest, proof.continuityProof.roots,
       { gasLimit: 2_000_000 }
@@ -73,6 +76,8 @@ async function keeper(txHash: string, block: number) {
         const parsed = manager.interface.parseLog(l);
         if (parsed?.name === 'PositionLiquidated') {
           log(`PositionLiquidated: remaining ${ethers.formatEther(parsed.args[1])} < min ${ethers.formatEther(parsed.args[2])}`, 'kill');
+        } else if (parsed?.name === 'PositionRestored') {
+          log(`PositionRestored: collateral ${ethers.formatEther(parsed.args[1])} ≥ min ${ethers.formatEther(parsed.args[2])}`, 'done');
         } else if (parsed) {
           log(`Event: ${parsed.name}`, 'event');
         }
@@ -95,14 +100,25 @@ async function scanWithdrawals() {
     const head = await srcProvider.getBlockNumber();
     if (lastScanned === 0) lastScanned = Number(process.env.RESCAN_FROM ?? 0) || head;
     if (head <= lastScanned) return;
-    const events = await vault.queryFilter(vault.filters.CollateralWithdrawn(), lastScanned + 1, head);
+    const [wds, deps] = await Promise.all([
+      vault.queryFilter(vault.filters.CollateralWithdrawn(), lastScanned + 1, head),
+      vault.queryFilter(vault.filters.CollateralDeposited(), lastScanned + 1, head),
+    ]);
     lastScanned = head;
-    for (const ev of events) {
+    for (const ev of wds) {
       if (seenTxs.has(ev.transactionHash)) continue;
       seenTxs.add(ev.transactionHash);
-      const [positionId, amount, remaining] = (ev as ethers.EventLog).args!;
-      log(`CollateralWithdrawn(#${positionId}): -${ethers.formatEther(amount)}, remaining ${ethers.formatEther(remaining)}`, 'event');
-      keeper(ev.transactionHash, ev.blockNumber);
+      const a = (ev as ethers.EventLog).args!;
+      log(`CollateralWithdrawn(#${a[0]}): -${ethers.formatEther(a[1])}, remaining ${ethers.formatEther(a[2])}`, 'event');
+      keeper(ev.transactionHash, ev.blockNumber, 0, 'Withdrawal');
+    }
+    for (const ev of deps) {
+      if (seenTxs.has(ev.transactionHash)) continue;
+      seenTxs.add(ev.transactionHash);
+      const a = (ev as ethers.EventLog).args!;
+      // openPosition also emits CollateralDeposited; only chase top-ups (position already known on CC)
+      log(`CollateralDeposited(#${a[0]}): +${ethers.formatEther(a[2])}, remaining ${ethers.formatEther(a[3])}`, 'event');
+      keeper(ev.transactionHash, ev.blockNumber, 1, 'Deposit');
     }
   } catch (e: any) {
     // transient RPC failure; retry next tick
@@ -159,6 +175,26 @@ const server = http.createServer(async (req, res) => {
           res.end(JSON.stringify({ txHash: tx.hash }));
         } catch (e: any) {
           log(`Withdraw failed: ${e.shortMessage ?? e.message}`, 'error');
+          res.writeHead(500, { 'content-type': 'application/json' });
+          res.end(JSON.stringify({ error: e.shortMessage ?? e.message }));
+        }
+      });
+    } else if (req.url === '/api/deposit' && req.method === 'POST') {
+      let body = '';
+      req.on('data', (c) => (body += c));
+      req.on('end', async () => {
+        try {
+          const { amount } = JSON.parse(body || '{}');
+          const wei = ethers.parseEther(String(amount ?? '20'));
+          const token = new Contract(process.env.TEST_TOKEN_ADDRESS!, ['function approve(address,uint256)'], wallet);
+          await (await token.approve(process.env.COLLATERAL_VAULT_ADDRESS!, wei)).wait();
+          log(`Depositing ${amount ?? '20'} TST to rescue position…`, 'action');
+          const tx = await vault.deposit(POSITION_ID, wei);
+          await tx.wait();
+          res.writeHead(200, { 'content-type': 'application/json' });
+          res.end(JSON.stringify({ txHash: tx.hash }));
+        } catch (e: any) {
+          log(`Deposit failed: ${e.shortMessage ?? e.message}`, 'error');
           res.writeHead(500, { 'content-type': 'application/json' });
           res.end(JSON.stringify({ error: e.shortMessage ?? e.message }));
         }

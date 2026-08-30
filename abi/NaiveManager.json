@@ -6,19 +6,6 @@
   },
   {
     "type": "function",
-    "name": "DEPOSIT_EVENT_SIGNATURE",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "VERIFIER",
     "inputs": [],
     "outputs": [
@@ -60,11 +47,6 @@
         "internalType": "address"
       },
       {
-        "name": "debt",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
         "name": "minCollateral",
         "type": "uint256",
         "internalType": "uint256"
@@ -77,7 +59,7 @@
       {
         "name": "status",
         "type": "uint8",
-        "internalType": "enum DeadswitchManager.PositionStatus"
+        "internalType": "enum NaiveManager.PositionStatus"
       },
       {
         "name": "exists",
@@ -155,57 +137,6 @@
   },
   {
     "type": "function",
-    "name": "getPosition",
-    "inputs": [
-      {
-        "name": "positionId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "tuple",
-        "internalType": "struct DeadswitchManager.DebtPosition",
-        "components": [
-          {
-            "name": "borrower",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "debt",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "minCollateral",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "lastAttestedCollateral",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "status",
-            "type": "uint8",
-            "internalType": "enum DeadswitchManager.PositionStatus"
-          },
-          {
-            "name": "exists",
-            "type": "bool",
-            "internalType": "bool"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "owner",
     "inputs": [],
     "outputs": [
@@ -251,27 +182,9 @@
         "internalType": "address"
       },
       {
-        "name": "debt",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
         "name": "minCollateral",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "registerSourceVault",
-    "inputs": [
-      {
-        "name": "vault",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -286,19 +199,6 @@
   },
   {
     "type": "function",
-    "name": "sourceVault",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "transferOwnership",
     "inputs": [
       {
@@ -309,31 +209,6 @@
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "event",
-    "name": "CollateralAttested",
-    "inputs": [
-      {
-        "name": "positionId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "withdrawn",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "remaining",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
   },
   {
     "type": "event",
@@ -365,99 +240,19 @@
         "internalType": "uint256"
       },
       {
-        "name": "remainingCollateral",
+        "name": "remaining",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
       },
       {
-        "name": "minCollateral",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "PositionRegistered",
-    "inputs": [
-      {
-        "name": "positionId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "borrower",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "debt",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "minCollateral",
+        "name": "min",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
       }
     ],
     "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "PositionRestored",
-    "inputs": [
-      {
-        "name": "positionId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "remainingCollateral",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "minCollateral",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "SourceVaultRegistered",
-    "inputs": [
-      {
-        "name": "vault",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "error",
-    "name": "InvalidAction",
-    "inputs": [
-      {
-        "name": "action",
-        "type": "uint8",
-        "internalType": "uint8"
-      }
-    ]
   },
   {
     "type": "error",
@@ -480,10 +275,5 @@
         "internalType": "address"
       }
     ]
-  },
-  {
-    "type": "error",
-    "name": "ReentrancyGuardReentrantCall",
-    "inputs": []
   }
 ]

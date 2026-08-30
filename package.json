@@ -5,6 +5,7 @@
   "scripts": {
     "liquidate": "tsx script/liquidate.ts",
     "server": "tsx script/server.ts",
+    "exploit": "tsx script/exploit.ts",
     "build": "forge build"
   },
   "dependencies": {

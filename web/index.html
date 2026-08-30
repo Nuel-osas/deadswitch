@@ -149,8 +149,9 @@
         <div class="row"><dt>withdrawals</dt><dd>never blocked — every one emits a provable event</dd></div>
       </dl>
       <div class="action">
-        <input id="amount" value="10" inputmode="decimal" aria-label="Amount to withdraw" />
+        <input id="amount" value="60" inputmode="decimal" aria-label="Amount" />
         <button id="withdraw">WITHDRAW</button>
+        <button id="deposit" style="background:transparent;border:1px solid var(--line-strong);color:var(--dim)">TOP UP</button>
       </div>
       <div class="action-note" id="action-note">withdrawing below the threshold kills the position across the wire →</div>
       <div class="addr" id="vault-addr"></div>
@@ -250,6 +251,15 @@ async function tick() {
   }
 }
 
+$('deposit').onclick = async () => {
+  const btn = $('deposit');
+  btn.disabled = true; btn.textContent = 'SIGNING…';
+  try {
+    const r = await fetch('/api/deposit', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ amount: $('amount').value }) });
+    $('action-note').textContent = r.ok ? 'top-up sent — the oracle can rescue the position' : 'deposit failed';
+  } catch (e) { $('action-note').textContent = 'deposit failed: ' + e.message; }
+  finally { btn.disabled = false; btn.textContent = 'TOP UP'; tick(); }
+};
 $('withdraw').onclick = async () => {
   const btn = $('withdraw');
   btn.disabled = true;
