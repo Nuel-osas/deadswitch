@@ -106,7 +106,14 @@ Superseded, kept so the security demos stay reproducible:
 | DeadswitchManager v2 | Creditcoin CC3 | `0x70FD9432620accb22E015E3929FF948B41aa3BD4` | inherits the tutorial's `USCBase`; the contract the attack demos defeat |
 | DeadswitchManager v1 | Creditcoin CC3 | `0xe12EEc4cD89F695A709e27E8ceb01b213fcd9a0c` | carries the first two live liquidations |
 
-Proven kill, on-chain: withdrawal [`0x8758…4b10`](https://sepolia.etherscan.io/tx/0x87585c3b4d832d8519220cfe8da89a924500da931537bbff04e01c7b20784b10)
+All CC3 contracts are **verified on Blockscout**, so every event below decodes publicly.
+
+Headline proof — position #3, liquidated autonomously by the permissionless keeper on the current
+v3 contract: 60 TST withdrawn on Sepolia, 40 TST attested against a 50 TST threshold.
+[`0xd149012c…`](https://creditcoin-testnet.blockscout.com/tx/0xd149012c274f0bf1b937a3171d591a4371635749075dce1bd1a255f440eb78d6) decodes to `CollateralAttested(3, 40.0)` and
+`PositionLiquidated(3, 40.0, 50.0)`.
+
+Earlier proven kill: withdrawal [`0x8758…4b10`](https://sepolia.etherscan.io/tx/0x87585c3b4d832d8519220cfe8da89a924500da931537bbff04e01c7b20784b10)
 (100 → 40 TST, threshold 50) → proof submitted → `PositionLiquidated(1, 40e18, 50e18)`.
 
 ## Run it

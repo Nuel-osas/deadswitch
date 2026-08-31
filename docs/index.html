@@ -481,10 +481,10 @@ section { padding-top: var(--section-y); padding-bottom: var(--section-y); borde
           <div class="chain-head"><span>Collateral vault</span><span class="id">Sepolia</span></div>
           <div class="chain-body">
             <span class="metric-label">collateral remaining</span>
-            <div class="metric">~0<span class="unit">TST</span></div>
+            <div class="metric">40<span class="unit">TST</span></div>
             <dl class="rows">
-              <div class="row"><dt>attested before</dt><dd>100 TST</dd></div>
-              <div class="row"><dt>exact remaining</dt><dd>1 wei</dd></div>
+              <div class="row"><dt>before withdrawal</dt><dd>100 TST</dd></div>
+              <div class="row"><dt>withdrawn</dt><dd>60 TST</dd></div>
               <div class="row"><dt>withdrawals</dt><dd>never blocked by the debt, always logged</dd></div>
             </dl>
           </div>
@@ -496,12 +496,12 @@ section { padding-top: var(--section-y); padding-bottom: var(--section-y); borde
             <div class="metric dead">Liquidated</div>
             <dl class="rows">
               <div class="row"><dt>liquidation threshold</dt><dd>50 TST</dd></div>
-              <div class="row"><dt>attested collateral</dt><dd class="danger">~0 TST</dd></div>
+              <div class="row"><dt>attested collateral</dt><dd class="danger">40 TST</dd></div>
               <div class="row"><dt>liquidated</dt><dd>in the transaction that verified the proof</dd></div>
             </dl>
           </div>
         </div>
-        <p class="panel-cap">A recorded reading from position #200, not a live feed: attested <code>100.000000000000000001</code>, then <code>0.000000000000000001</code>, against a <code>50.0</code> threshold. The console runs locally against both testnets.</p>
+        <p class="panel-cap">Position #3, liquidated by the permissionless keeper with no human in the loop: 60 TST withdrawn on Sepolia, 40 TST attested against a 50 TST threshold. Verify on Creditcoin: <a href="https://creditcoin-testnet.blockscout.com/tx/0xd149012c274f0bf1b937a3171d591a4371635749075dce1bd1a255f440eb78d6"><code>0xd149012c…</code></a> — decoded <code>CollateralAttested(3, 40.0)</code> and <code>PositionLiquidated(3, 40.0, 50.0)</code> on the verified v3 contract. A recorded reading, not a live feed.</p>
       </div>
     </div>
   </section>
