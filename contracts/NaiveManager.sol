@@ -11,9 +11,10 @@ import {USCBase} from "./USCBase.sol";
  *   1. It does NOT check receipt.receiptStatus == 1
  *   2. It does NOT check the event emitter address
  *
- * This is what a team following the tutorial mechanically ships. Both holes are
- * independently exploitable. This contract exists ONLY to be attacked on camera.
- * DO NOT USE.
+ * This is a CONTROL, not a claim about the tutorial: Gluwa's USCLoanManager.sol
+ * already implements both guards (lines 240 and 267, PR #92). This contract was
+ * built by REMOVING them, so that the emitter guard's necessity can be shown
+ * executing on-chain rather than asserted. DO NOT USE.
  */
 contract NaiveManager is Ownable, USCBase {
     enum PositionStatus { Active, Liquidated, Closed }

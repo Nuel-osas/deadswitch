@@ -4,7 +4,7 @@
 Deadswitch
 
 ## Tagline (one line)
-A loan that dies the instant its collateral moves on another chain — no bridge, no relayer, no price feed.
+Collateral on Ethereum, debt on Creditcoin — the loan liquidates itself when the collateral leaves, proven by an Attestcoin receipt from the source chain. No bridge, no relayer, no price feed.
 
 ## Track
 DeFi
@@ -34,30 +34,53 @@ feature we added; it is the mechanism. Remove it and there is no project.
 The lifecycle runs both ways: a collateral top-up on Sepolia, proven the same way, restores a
 position before it dies. Same primitive, opposite direction.
 
-## What makes it more than a tutorial fork — the security work
-Creditcoin's precompile proves *inclusion*, not *success*, and says nothing about *who* emitted
-a log. A naive cross-chain manager is exploitable two ways, both of which we demonstrate live
-against a deliberately-naive contract (`yarn exploit`):
+## The security work
 
-- **Forged event, fake vault.** Anyone can deploy a contract that emits `CollateralWithdrawn`
-  with a victim's positionId. The event is real and provable; the vault is a lie. The naive
-  manager liquidates the victim. Deadswitch requires the emitter to be the registered vault and
-  rejects with `"Event not emitted by registered vault"`.
-- **Reverted transaction.** A failed withdrawal still produces a valid inclusion proof. The naive
-  manager acts on it. Deadswitch requires `receiptStatus == 1` and rejects with
-  `"Source transaction did not succeed"`.
+Creditcoin's `0x0FD2` precompile proves *inclusion*. Everything else — success, emitter identity,
+replay, staleness — is the consuming contract's problem. Gluwa's loan tutorial already teaches
+emitter authentication and receipt-status checking (`USCLoanManager.sol:240` and `:267`, PR #92,
+`4ff9a3b`, 2026-07-29). **Deadswitch implements all ten of the tutorial's guards, and adds three
+things it does not have.**
+
+**1. An executable proof that the emitter guard is load-bearing.** `MaliciousVault` forges a real,
+provable `CollateralWithdrawn` for a position it does not own. The identical proof liquidates an
+unguarded manager on CC3 and bounces off Deadswitch with `"Event not emitted by registered vault"`.
+
+**2. Two structural flaws in `USCBase` itself, demonstrated live — they defeat any manager built
+on the tutorial, including Deadswitch v2.**
+
+- *Action-selector suppression.* The replay key is `keccak(chainKey, blockHeight, txIndex)` — it
+  omits `action`, which the caller supplies. One transaction carrying both a deposit and a
+  withdrawal, submitted as a deposit, makes the withdrawal permanently unprovable. On v2 the
+  drained position reports **100 TST and ACTIVE** while the collateral is gone.
+  Tx `0x979a5719…`
+- *Decoy-log censorship.* Consumers read `logs[0]` and revert on the emitter check. A decoy event
+  prefixed in the same transaction makes a genuine withdrawal permanently unprovable — the guard
+  from (1) becomes the weapon. Tx `0x6f88a998…`
+
+**3. The v3 fix.** `DeadswitchBase.sol`: the action is derived from each log's `topics[0]` instead
+of trusted from the caller; every log from the registered vault is applied in order; foreign logs
+are skipped rather than reverted on; `blockHeight` is threaded through so stale proofs cannot
+overwrite newer state. Both attacks were re-run against v3 and both positions liquidated correctly.
+
+Both findings are filed upstream. `yarn attack` reproduces either one against both managers.
 
 Third defense: the ~10-minute attestation wait is finality protection — Deadswitch never
-liquidates on a Sepolia block that could still be reorged away. See `SECURITY.md`.
+liquidates on a Sepolia block that could still be reorged away. Full detail in `SECURITY.md`.
 
 ## Live on testnet (real transactions)
 | Contract | Chain | Address |
 |---|---|---|
-| CollateralVault | Sepolia | 0x80366d27b907828A36243140ce6ACED6350EE412 |
-| DeadswitchManager | Creditcoin CC3 | 0x70FD9432620accb22E015E3929FF948B41aa3BD4 |
+| **DeadswitchManagerV3** (current) | Creditcoin CC3 | `0x44e2d55Af74f400b97fBC010Acd504A1458bA682` |
+| CollateralVault | Sepolia | `0x80366d27b907828A36243140ce6ACED6350EE412` |
+| DeadswitchManager v2 (superseded) | Creditcoin CC3 | `0x70FD9432620accb22E015E3929FF948B41aa3BD4` |
+| DeadswitchManager v1 (superseded) | Creditcoin CC3 | `0xe12EEc4cD89F695A709e27E8ceb01b213fcd9a0c` |
 
-- A real position, liquidated by a proven cross-chain withdrawal, autonomously by the keeper.
-- Both exploits demonstrated failing against Deadswitch and succeeding against the naive manager.
+- Real positions liquidated by proven cross-chain withdrawals — manually and autonomously by the
+  keeper — on v1 `0xe12EEc4c`.
+- The forged-event demonstration: `NaiveManager` `0x9EdeA943` liquidated from a forged event;
+  Deadswitch rejected the identical proof.
+- Both `USCBase` findings executed on live Sepolia and CC3, defeating v2 and failing against v3.
 
 ## Repo
 https://github.com/Nuel-osas/deadswitch  (contracts, keeper, exploit demo, SECURITY.md, run instructions)
@@ -71,6 +94,7 @@ Withdraw collateral on the Sepolia pane; watch the position die on the Creditcoi
 attestation progress visible between them. `yarn exploit <tx> <id>` runs the attack demo.
 
 ## Scope (honest)
-MVP: one collateral asset, one source chain, full liquidation + collateral restore. No interest
+MVP: one collateral asset, one source chain, full liquidation + collateral restore. Positions are
+owner-registered — there is no lender-matching market. No interest
 accrual, no auctions, no matching engine — those are products on top of the primitive. The
 submission is the trust-minimized liquidation path and the security work that makes it safe.
