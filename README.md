@@ -54,15 +54,31 @@ Sepolia                                Creditcoin
 4. The `0x0FD2` precompile verifies the proof **synchronously, in the same transaction**.
 5. The manager decodes the receipt, checks it, and liquidates if `remaining < minCollateral`.
 
-## The two checks that matter
+## Hardening the 0x0FD2 trust boundary
 
-**Receipt status.** The precompile proves a transaction was *included* — not that it
-*succeeded*. A reverted withdrawal still has a valid inclusion proof. Deadswitch requires
-`receipt.receiptStatus == 1`, otherwise a failed withdrawal could liquidate a healthy position.
+Gluwa's loan tutorial already teaches emitter authentication and receipt-status checking —
+`USCLoanManager.sol:240` and `:267`, added in PR #92 (`4ff9a3b`, 2026-07-29). Deadswitch adopts
+all ten of those guards. What it adds is below.
 
-**Emitter address.** Anyone can deploy a contract that emits `CollateralWithdrawn` with your
-positionId and prove it faithfully — the event is real, the contract is a lie. Deadswitch
-accepts events only from the registered vault address.
+**1. Proof that the emitter guard is load-bearing.** `MaliciousVault` forges a real, provable
+`CollateralWithdrawn` for a position it does not own. The identical proof liquidates an unguarded
+manager on CC3 and bounces off Deadswitch with `"Event not emitted by registered vault"` — the
+executable version of the warning in the tutorial's own comment. `yarn exploit` reproduces it.
+
+**2. Two ways to defeat any manager built on the tutorial's `USCBase` — including Deadswitch v2.**
+
+- **Action-selector suppression.** `USCBase`'s replay key is
+  `keccak(chainKey, blockHeight, txIndex)`. It omits `action`, which the *caller* supplies. One
+  transaction carrying both a deposit and a withdrawal can be consumed as a deposit; the
+  withdrawal is then permanently unprovable. Collateral leaves, the position stays healthy.
+- **Decoy-log censorship.** Consumers read `logs[0]` and revert on the emitter check. Prefixing a
+  decoy event from a throwaway contract in the same transaction makes the genuine withdrawal
+  permanently unprovable — the emitter guard becomes the censorship vector.
+
+Both are demonstrated live (`yarn attack`) and both are fixed in **v3** (`DeadswitchBase.sol`):
+the action is derived from each log's own `topics[0]` instead of trusted from the caller, every
+log emitted by the registered vault is applied in order, foreign logs are skipped rather than
+reverted on, and `blockHeight` is threaded through so stale proofs cannot overwrite newer state.
 
 ## Why the ~10 minute wait is a feature
 
@@ -78,10 +94,17 @@ block changes every subsequent digest and can never reach quorum.
 
 | Contract | Chain | Address |
 |---|---|---|
+| **DeadswitchManagerV3** (current) | Creditcoin CC3 | `0x44e2d55Af74f400b97fBC010Acd504A1458bA682` |
 | CollateralVault | Sepolia | `0x80366d27b907828A36243140ce6ACED6350EE412` |
 | TestERC20 (TST) | Sepolia | `0xe12EEc4cD89F695A709e27E8ceb01b213fcd9a0c` |
-| DeadswitchManager | Creditcoin CC3 | `0xe12EEc4cD89F695A709e27E8ceb01b213fcd9a0c` |
 | EvmV1Decoder lib | Creditcoin CC3 | `0x60b70BC2E774d7A781138009A28B2917893dc98A` |
+
+Superseded, kept so the security demos stay reproducible:
+
+| Contract | Chain | Address | Why it still exists |
+|---|---|---|---|
+| DeadswitchManager v2 | Creditcoin CC3 | `0x70FD9432620accb22E015E3929FF948B41aa3BD4` | inherits the tutorial's `USCBase`; the contract the attack demos defeat |
+| DeadswitchManager v1 | Creditcoin CC3 | `0xe12EEc4cD89F695A709e27E8ceb01b213fcd9a0c` | carries the first two live liquidations |
 
 Proven kill, on-chain: withdrawal [`0x8758…4b10`](https://sepolia.etherscan.io/tx/0x87585c3b4d832d8519220cfe8da89a924500da931537bbff04e01c7b20784b10)
 (100 → 40 TST, threshold 50) → proof submitted → `PositionLiquidated(1, 40e18, 50e18)`.

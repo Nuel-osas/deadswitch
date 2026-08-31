@@ -5,7 +5,7 @@ import { join } from 'path';
 import { Contract, ethers, InterfaceAbi } from 'ethers';
 import { chainInfo, proofProvider } from '@gluwa/usc-sdk';
 
-import managerAbi from '../abi/DeadswitchManager.json';
+import managerAbi from '../abi/DeadswitchManagerV3.json';
 
 dotenv.config({ override: true });
 
@@ -18,6 +18,17 @@ const VAULT_ABI = [
   'event CollateralDeposited(uint256 indexed positionId, address indexed owner, uint256 amount, uint256 remaining)',
 ];
 
+const REQUIRED = [
+  'SOURCE_CHAIN_KEY', 'PROOF_BUILDER_URL', 'CREDITCOIN_RPC_URL', 'SOURCE_CHAIN_RPC_URL',
+  'CREDITCOIN_WALLET_PRIVATE_KEY', 'DEADSWITCH_MANAGER_V3_ADDRESS', 'COLLATERAL_VAULT_ADDRESS',
+  'TEST_TOKEN_ADDRESS',
+];
+const missing = REQUIRED.filter((k) => !process.env[k]);
+if (missing.length) {
+  console.error(`\nMissing required env vars: ${missing.join(', ')}\nCopy .env.example to .env and fill in CREDITCOIN_WALLET_PRIVATE_KEY.\n`);
+  process.exit(1);
+}
+
 const chainKey = Number(process.env.SOURCE_CHAIN_KEY);
 const ccProvider = new ethers.JsonRpcProvider(process.env.CREDITCOIN_RPC_URL);
 const srcProvider = new ethers.JsonRpcProvider(process.env.SOURCE_CHAIN_RPC_URL);
@@ -25,7 +36,7 @@ const wallet = new ethers.Wallet(process.env.CREDITCOIN_WALLET_PRIVATE_KEY!, src
 const ccWallet = new ethers.Wallet(process.env.CREDITCOIN_WALLET_PRIVATE_KEY!, ccProvider);
 
 const vault = new Contract(process.env.COLLATERAL_VAULT_ADDRESS!, VAULT_ABI, wallet);
-const manager = new Contract(process.env.DEADSWITCH_MANAGER_ADDRESS!, managerAbi as InterfaceAbi, ccWallet);
+const manager = new Contract(process.env.DEADSWITCH_MANAGER_V3_ADDRESS!, managerAbi as InterfaceAbi, ccWallet);
 const info = new chainInfo.PrecompileChainInfoProvider(ccProvider);
 const proofBuilder = new proofProvider.service.ProofBuilder(chainKey, process.env.PROOF_BUILDER_URL!);
 
@@ -44,7 +55,7 @@ let pendingProof: { txHash: string; block: number } | null = null;
 
 // Permissionless keeper: watch the vault, prove every withdrawal, submit.
 // Anyone on the internet could run this loop — that is the point.
-async function keeper(txHash: string, block: number, action: number, kind: string) {
+async function keeper(txHash: string, block: number, _action: number, kind: string) {
   pendingProof = { txHash, block };
   log(`${kind} ${txHash.slice(0, 10)}… in Sepolia block ${block}. Waiting for attestation…`, 'wait');
   try {
@@ -64,8 +75,9 @@ async function keeper(txHash: string, block: number, action: number, kind: strin
     if (!proofRes.success) throw new Error(`Proof generation failed: ${proofRes.error}`);
     const proof = proofRes.data!;
     log('Proof generated. Submitting to DeadswitchManager.execute…', 'proof');
+    // v3 derives the action from the logs themselves — no caller-supplied selector.
     const tx = await manager.execute(
-      action, proof.chainKey, proof.headerNumber, proof.txBytes,
+      proof.chainKey, proof.headerNumber, proof.txBytes,
       proof.merkleProof.root, proof.merkleProof.siblings,
       proof.continuityProof.lowerEndpointDigest, proof.continuityProof.roots,
       { gasLimit: 2_000_000 }
@@ -77,7 +89,7 @@ async function keeper(txHash: string, block: number, action: number, kind: strin
         if (parsed?.name === 'PositionLiquidated') {
           log(`PositionLiquidated: remaining ${ethers.formatEther(parsed.args[1])} < min ${ethers.formatEther(parsed.args[2])}`, 'kill');
         } else if (parsed?.name === 'PositionRestored') {
-          log(`PositionRestored: collateral ${ethers.formatEther(parsed.args[1])} ≥ min ${ethers.formatEther(parsed.args[2])}`, 'done');
+          log(`PositionRestored: collateral ${ethers.formatEther(parsed.args[1])} >= min ${ethers.formatEther(parsed.args[2])}`, 'done');
         } else if (parsed) {
           log(`Event: ${parsed.name}`, 'event');
         }
@@ -150,7 +162,7 @@ async function status() {
     positionId: POSITION_ID,
     addresses: {
       vault: process.env.COLLATERAL_VAULT_ADDRESS,
-      manager: process.env.DEADSWITCH_MANAGER_ADDRESS,
+      manager: process.env.DEADSWITCH_MANAGER_V3_ADDRESS,
     },
     feed,
   };
@@ -200,16 +212,20 @@ const server = http.createServer(async (req, res) => {
         }
       });
     } else {
-      const file = req.url === '/' || !req.url ? 'index.html' : req.url.slice(1);
+      // Serve only from an explicit allowlist. A naive join() here is a path
+      // traversal: `curl --path-as-is /../.env` would serve the private key.
+      const ALLOWED: Record<string, string> = { '/': 'index.html', '/index.html': 'index.html' };
+      const file = ALLOWED[(req.url ?? '/').split('?')[0]];
       let body: Buffer;
       try {
+        if (!file) throw new Error('not allowed');
         body = readFileSync(join(__dirname, '..', 'web', file));
       } catch {
         res.writeHead(404);
         res.end('not found');
         return;
       }
-      res.writeHead(200, { 'content-type': file.endsWith('.html') ? 'text/html' : 'text/plain' });
+      res.writeHead(200, { 'content-type': 'text/html' });
       res.end(body);
     }
   } catch (e) {
@@ -218,4 +234,6 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(4020, () => log('Deadswitch demo server on http://localhost:4020', 'info'));
+// Bind loopback only: /api/withdraw and /api/deposit sign with a live key and
+// are unauthenticated. Never expose this process to a network interface.
+server.listen(4020, '127.0.0.1', () => log('Deadswitch demo server on http://127.0.0.1:4020', 'info'));
