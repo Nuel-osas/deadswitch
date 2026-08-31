@@ -1,0 +1,1265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Deadswitch: collateral on Ethereum Sepolia, debt on Creditcoin CC3. The position liquidates itself when the collateral leaves, proven by an Attestcoin receipt verified in-transaction by the 0x0FD2 precompile. No bridge, no relayer, no price feed.">
+<title>Deadswitch: cross-chain liquidation proven by Attestcoin</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Deadswitch">
+<meta property="og:title" content="Deadswitch: the position dies when the collateral leaves">
+<meta property="og:description" content="Collateral on Ethereum Sepolia, debt on Creditcoin CC3. An Attestcoin receipt from the source chain liquidates the loan, verified in-transaction by the 0x0FD2 precompile. No bridge, no relayer, no price feed.">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Deadswitch: the position dies when the collateral leaves">
+<meta name="twitter:description" content="Collateral on Ethereum Sepolia, debt on Creditcoin CC3. An Attestcoin receipt liquidates the loan, verified in-transaction by the 0x0FD2 precompile.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2309090b'/%3E%3Crect x='6' y='6' width='20' height='20' fill='none' stroke='%23ff3b41' stroke-width='3'/%3E%3Crect x='14' y='2' width='4' height='12' fill='%23ff3b41'/%3E%3C/svg%3E">
+<style>
+:root {
+  /* ---- ground: identical to web/index.html so the two pages read as one product ---- */
+  --bg:          #09090b;
+  --surface:     #101012;
+  --well:        #060607;
+  --line:        #1f1f23;
+  --line-strong: #2b2b31;
+
+  /* ---- text: three AA-safe steps on --bg ---- */
+  --text:   #e4e4e7;
+  --text-2: #a1a1aa;
+  --text-3: #8b8b95;
+  --edge:   #45454d;   /* NON-TEXT ONLY: hairlines and strokes, never a text fill */
+  /* resting border for anything clickable. 5.90:1 on --bg, so it clears WCAG 1.4.11. */
+  --border-interactive: var(--text-3);
+
+  /* ---- the one accent. red = death. ---- */
+  --accent:      #ff3b41;
+  --accent-hi:   #ff5f64;
+  --accent-dim:  #7d2226;
+  --on-accent:   #09090b;
+  --accent-wash: #1a0d0e;
+
+  /* ---- semantic 'alive' state only ---- */
+  --ok:      #34d399;
+  --ok-wash: #0b1a15;
+
+  /* ---- type ---- */
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+
+  --fs-micro: 10.5px;
+  --fs-xs:    11.5px;
+  --fs-sm:    12.5px;
+  --fs-base:  14px;
+  --fs-md:    16px;
+  --fs-lg:    19px;
+  --fs-num:   clamp(22px, 3.4vw, 34px);
+  --fs-h2:    clamp(24px, 3.6vw, 34px);
+  --fs-h1:    clamp(30px, 4.8vw, 48px);  /* the 48px ceiling, not 56px: above ~1167px the copy
+                                            track stops growing, so 56px broke the two-line cap */
+
+  --lh-tight:   1.1;
+  --lh-body:    1.6;
+  --lh-data:    1.5;
+  --tr-caps:    0.14em;
+  --tr-display: -0.02em;
+
+  --measure:       68ch;
+  --measure-tight: 52ch;
+
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px; --s5: 24px;
+  --s6: 32px; --s7: 48px; --s8: 64px; --s9: 96px;
+  --gutter:    clamp(20px, 4vw, 28px);
+  --section-y: clamp(48px, 7vw, 84px);
+  --maxw:      1160px;
+  --nav-h:     64px;
+
+  --hair:        1px solid var(--line);
+  --hair-strong: 1px solid var(--line-strong);
+
+  --dur-1: 90ms;
+  --dur-2: 180ms;
+  --ease:  cubic-bezier(0.16, 1, 0.3, 1);
+
+  --focus-ring:      2px solid var(--accent);
+  --focus-offset:    2px;
+  --focus-on-accent: 2px solid var(--text);
+
+  --z-nav: 10;
+}
+
+/* ---------- reset ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; padding: 0; }
+html { background: var(--bg); -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: var(--fs-base)/var(--lh-body) var(--mono);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+img, svg { max-width: 100%; }
+ul, ol { list-style: none; }
+table { border-collapse: collapse; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+/* ---------- typography ---------- */
+h1, h2 { font-family: var(--sans); font-weight: 600; letter-spacing: var(--tr-display); line-height: var(--lh-tight); }
+h1 { font-size: var(--fs-h1); }
+h2 { font-size: var(--fs-h2); max-width: 24ch; text-wrap: balance; }
+h3 { font-family: var(--sans); font-size: var(--fs-lg); font-weight: 600; letter-spacing: var(--tr-display); line-height: 1.2; }
+p { max-width: var(--measure); color: var(--text-2); }
+p strong, li strong { color: var(--text); font-weight: 500; }
+code, pre { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+code { font-size: 0.92em; color: var(--text); }
+p code, li code, td code, dd code { color: var(--text); }
+
+a { color: var(--text); text-decoration: none; border-bottom: 1px solid var(--line-strong); transition: color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease); }
+a:hover { color: var(--text); border-bottom-color: var(--text); }
+a:active { color: var(--text-2); border-bottom-color: var(--text-2); }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
+  outline: var(--focus-ring); outline-offset: var(--focus-offset);
+}
+
+/* ---------- utilities ---------- */
+.wrap { max-width: var(--maxw); margin: 0 auto; padding-left: var(--gutter); padding-right: var(--gutter); }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.skip {
+  position: absolute; left: var(--s4); top: -60px; z-index: 20;
+  background: var(--accent); color: var(--on-accent); padding: var(--s2) var(--s4);
+  font-size: var(--fs-sm); border: 0;
+}
+.skip:focus { top: var(--s3); outline: var(--focus-on-accent); outline-offset: var(--focus-offset); }
+.scroll-x { overflow-x: auto; overscroll-behavior-x: contain; }
+/* Every grid child that can hold wide mono content gets a zero minimum, so a 66-char
+   hash or a `white-space: pre` block can never inflate its track past the viewport. */
+.hero-grid > *, .mech-panels > *, .claims > *, .tx-list > *,
+.timeline > *, .ab > *, .repro > *, .fa-grid > *, .fa-stack > *,
+.mirror > *, .fb-tail > *, .spec li > *, .annot > *, .tiles > *, .tile-body > *,
+.cmd > *, .well > * { min-width: 0; }
+.scroll-x { min-width: 0; max-width: 100%; }
+
+.scroll-x:focus-visible { outline: var(--focus-ring); outline-offset: 0; }
+.measure { max-width: var(--measure); }
+.measure-t { max-width: var(--measure-tight); }
+.note { color: var(--text-3); font-size: var(--fs-sm); }
+.dead { color: var(--accent); }
+.alive { color: var(--ok); }
+section { padding-top: var(--section-y); padding-bottom: var(--section-y); border-top: 1px solid var(--line); }
+.sec-head { margin-bottom: var(--s7); }
+.sec-head p { margin-top: var(--s4); }
+.sec-head--center { text-align: center; }
+.sec-head--center h2 { max-width: 30ch; margin: 0 auto; }
+
+.verify { font-size: var(--fs-xs); color: var(--text-3); margin-top: var(--s3); line-height: 1.6; }
+.verify a { color: var(--text-2); border-bottom: 1px solid var(--line-strong); }
+.verify a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ---------- nav ---------- */
+.nav {
+  position: sticky; top: 0; z-index: var(--z-nav);
+  background: var(--bg); border-bottom: 1px solid var(--line);
+  height: var(--nav-h);
+}
+.nav-in { max-width: var(--maxw); margin: 0 auto; padding: 0 var(--gutter); height: 100%; display: flex; align-items: center; gap: var(--s5); }
+.wordmark {
+  font: 700 17px/1 var(--sans); letter-spacing: 0.16em; color: var(--text);
+  border-bottom: 0; white-space: nowrap;
+}
+.wordmark b { color: var(--accent); font-weight: 700; }
+.wordmark:hover { color: var(--text); }
+.nav-links { margin-left: auto; display: flex; align-items: center; gap: var(--s5); font-size: var(--fs-xs); white-space: nowrap; }
+.nav-links a { color: var(--text-3); border-bottom: 1px solid transparent; padding-bottom: 2px; }
+.nav-links a:hover { color: var(--text); border-bottom-color: var(--line-strong); }
+.nav-links a:active { color: var(--text-2); }
+@media (max-width: 760px) {
+  .nav-anchors { display: none; }
+  .nav-links { gap: var(--s4); }
+}
+
+/* ---------- hero: asymmetric split with a real component panel ---------- */
+.hero {
+  border-top: 0; padding-top: var(--s6); padding-bottom: var(--s6);
+  min-height: calc(100dvh - var(--nav-h));
+  display: flex; align-items: center;
+}
+.hero-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(32px, 5vw, 72px); width: 100%; align-items: center; }
+.hero-copy > * + * { margin-top: var(--s5); }
+.hero h1 { max-width: none; text-wrap: balance; }
+.hero-sub { font-size: var(--fs-md); color: var(--text-2); max-width: var(--measure-tight); }
+.hero-note { font-size: var(--fs-sm); color: var(--text-3); line-height: var(--lh-data); max-width: var(--measure-tight); }
+.cta-row { display: flex; flex-wrap: wrap; gap: var(--s3); }
+.cta {
+  display: inline-flex; align-items: center; height: 44px; padding: 0 var(--s5);
+  font: 600 var(--fs-sm)/1 var(--mono); letter-spacing: 0.06em;
+  text-transform: uppercase; white-space: nowrap;
+  border: 1px solid transparent; border-bottom-width: 1px;
+  transition: background-color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+}
+.cta-primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.cta-primary:hover { background: var(--accent-hi); border-color: var(--accent-hi); color: var(--on-accent); }
+.cta-primary:active { background: var(--accent-dim); border-color: var(--accent-dim); color: var(--text); }
+.cta-primary:focus-visible { outline: var(--focus-on-accent); outline-offset: var(--focus-offset); }
+.cta-secondary { border-color: var(--border-interactive); color: var(--text); }
+.cta-secondary:hover { border-color: var(--text); background: var(--surface); color: var(--text); }
+.cta-secondary:active { background: var(--bg); color: var(--text-2); }
+
+/* console chain card, lifted from index.html */
+.chain { border: 1px solid var(--line); background: var(--surface); }
+.chain + .chain { border-top: 0; }
+.chain-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: var(--s3);
+  padding: 12px 18px; border-bottom: 1px solid var(--line);
+  font-size: var(--fs-xs); letter-spacing: var(--tr-caps); color: var(--text-3);
+  text-transform: uppercase;
+}
+.chain-head .id { color: var(--text-3); letter-spacing: 0.08em; }
+.chain-body { padding: 20px 18px 18px; }
+.metric-label { display: block; font-size: var(--fs-micro); letter-spacing: var(--tr-caps); color: var(--text-3); text-transform: uppercase; }
+.metric {
+  font: 600 var(--fs-num)/1.1 var(--sans); letter-spacing: var(--tr-display);
+  margin: 6px 0 16px; font-variant-numeric: tabular-nums; text-transform: uppercase;
+}
+.metric .unit { font-size: 15px; color: var(--text-3); font-weight: 500; margin-left: 6px; letter-spacing: 0; }
+.rows { border-top: 1px solid var(--line); }
+.rows .row { display: flex; justify-content: space-between; gap: var(--s4); padding: 8px 0; border-bottom: 1px solid var(--line); font-size: var(--fs-sm); line-height: var(--lh-data); }
+.rows dt { color: var(--text-3); flex: none; }
+.rows dd { font-variant-numeric: tabular-nums; text-align: right; color: var(--text-2); word-break: break-all; }
+.rows dd.danger { color: var(--accent); }
+.panel-cap { margin-top: var(--s3); color: var(--text-3); font-size: var(--fs-xs); max-width: var(--measure-tight); }
+@media (max-width: 900px) {
+  .hero { min-height: 0; display: block; padding-bottom: var(--s7); }
+  .hero-grid { grid-template-columns: minmax(0, 1fr); gap: var(--s7); }
+}
+
+/* ---------- 1. mechanism: a panel pair, the step list, then one wide diagram ---------- */
+/* Diagrams are pinned to their natural width inside a scroll container, so their 11px
+   labels never shrink below 11px on a phone and the scroll affordance is real. */
+.diagram { border: 1px solid var(--line); background: var(--bg); }
+.diagram svg { display: block; width: 100%; min-width: 400px; max-width: none; }
+.diagram--wide { margin-top: var(--s7); }
+.diagram--wide svg { min-width: 900px; }
+.mech-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s4); }
+.mpanel { border: 1px solid var(--line); background: var(--surface); padding: var(--s5); }
+.mpanel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s3); margin-bottom: var(--s3); }
+.mpanel-head h3 { font-size: var(--fs-md); }
+.chain-tag { font-size: var(--fs-xs); letter-spacing: 0.08em; color: var(--text-3); text-transform: uppercase; }
+.mpanel p { font-size: var(--fs-sm); line-height: var(--lh-data); max-width: none; }
+.mpanel p + p { margin-top: var(--s3); }
+.steps { counter-reset: step; margin-top: var(--s6); border-left: 1px solid var(--line); max-width: var(--measure); }
+.steps li { counter-increment: step; position: relative; padding: 0 0 var(--s5) var(--s6); font-size: var(--fs-sm); line-height: var(--lh-data); color: var(--text-2); }
+.steps li:last-child { padding-bottom: 0; }
+.steps li::before {
+  content: counter(step); position: absolute; left: -6px; top: 1px;
+  width: 12px; height: 12px; background: var(--bg); border: 1px solid var(--line-strong);
+  font: 500 9px/12px var(--mono); text-align: center; color: var(--text-3);
+}
+/* one hairline strip, not a row of three feature cards */
+.claims {
+  margin-top: var(--s7); border-top: 1px solid var(--line-strong); max-width: none;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s3) var(--s5);
+  padding-top: var(--s4); font-size: var(--fs-sm); line-height: var(--lh-data);
+}
+.claims > span { flex: 1 1 24ch; }
+.claims span { color: var(--text-2); }
+.claims b { color: var(--text); font-weight: 500; }
+.claims span + span { padding-left: var(--s5); border-left: 1px solid var(--line); }
+@media (max-width: 860px) {
+  .mech-panels { grid-template-columns: minmax(0, 1fr); }
+  .claims { display: grid; gap: 0; }
+  .claims span + span { padding: var(--s3) 0 0; border-left: 0; }
+  .claims span { padding-bottom: var(--s3); }
+}
+
+/* ---------- 2. evidence: grouped ledger table ---------- */
+.ledger { width: 100%; min-width: 760px; font-size: var(--fs-sm); text-align: left; }
+.ledger th, .ledger td { padding: 10px var(--s4) 10px 0; vertical-align: top; line-height: var(--lh-data); }
+.ledger thead th {
+  font: 500 var(--fs-micro)/1.4 var(--mono); letter-spacing: var(--tr-caps);
+  text-transform: uppercase; color: var(--text-3); border-bottom: 1px solid var(--line-strong);
+  padding-bottom: var(--s2);
+}
+.ledger tbody th[scope="rowgroup"] {
+  font: 500 var(--fs-micro)/1.4 var(--mono); letter-spacing: var(--tr-caps);
+  text-transform: uppercase; color: var(--text-3); padding-top: var(--s5); border-bottom: 1px solid var(--line);
+}
+.ledger tbody td { border-bottom: 1px solid var(--line); color: var(--text-2); }
+.ledger tbody tr:hover td { background: var(--surface); }
+.ledger .c-name { color: var(--text); white-space: nowrap; }
+.ledger .c-chain { color: var(--text); white-space: nowrap; }
+.ledger .c-addr code { color: var(--text-2); white-space: nowrap; }
+.ledger .c-why { color: var(--text-3); min-width: 22ch; }
+.ledger .c-copy { text-align: right; width: 1%; white-space: nowrap; }
+.g-adv td { background: var(--accent-wash); }
+.g-adv tr:hover td { background: var(--accent-wash); color: var(--text); }
+.copy-btn {
+  font: 500 var(--fs-xs)/1 var(--mono); color: var(--text-3);
+  border: 1px solid var(--border-interactive); padding: 5px var(--s2);
+  transition: color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.copy-btn:hover { color: var(--text); border-color: var(--text); }
+.copy-btn:active { color: var(--text-2); border-color: var(--text-3); }
+.copy-btn[data-state="ok"] { color: var(--ok); border-color: var(--ok); }
+.copy-btn[data-state="fail"] { color: var(--accent); border-color: var(--accent); }
+.tx-list { margin-top: var(--s7); display: grid; gap: var(--s4); max-width: 100%; }
+.tx-list li { border-top: 1px solid var(--line); padding-top: var(--s4); }
+.tx-list .tx-label { color: var(--text); font-size: var(--fs-base); }
+.tx-list .tx-hash { display: block; margin-top: var(--s2); font-size: var(--fs-sm); word-break: break-all; overflow-wrap: anywhere; border-bottom-color: var(--line); }
+.tx-list .tx-hash:hover { border-bottom-color: var(--text-3); }
+.tx-list .tx-desc { margin-top: var(--s2); font-size: var(--fs-sm); color: var(--text-3); line-height: var(--lh-data); }
+.sub-head { font-size: var(--fs-base); color: var(--text); margin-bottom: var(--s4); }
+.sub-head + .scroll-x { margin-bottom: var(--s6); }
+.sub-head--gap { margin-top: var(--s8); }
+.ledger-note { margin-top: var(--s4); }
+
+/* ---------- 3. finality: one lead paragraph, then the horizontal stepper ---------- */
+.finality-lead { max-width: var(--measure); font-size: var(--fs-md); line-height: var(--lh-body); }
+.finality-lead + .finality-lead { margin-top: var(--s4); font-size: var(--fs-sm); color: var(--text-3); }
+.timeline { margin-top: var(--s7); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line-strong); }
+.tl-step { padding-top: var(--s5); padding-right: var(--s5); position: relative; }
+.tl-step + .tl-step { padding-left: var(--s5); border-left: 1px solid var(--line); }
+.tl-step::before { content: ""; position: absolute; top: -4px; left: 0; width: 7px; height: 7px; background: var(--bg); border: 1px solid var(--text-3); }
+.tl-step + .tl-step::before { left: var(--s5); }
+.tl-when { font: 600 var(--fs-num)/1.1 var(--sans); letter-spacing: var(--tr-display); font-variant-numeric: tabular-nums; color: var(--text); }
+.tl-step p { margin-top: var(--s3); font-size: var(--fs-sm); line-height: var(--lh-data); max-width: none; }
+@media (max-width: 860px) {
+  .timeline { grid-template-columns: minmax(0, 1fr); border-top: 0; border-left: 1px solid var(--line-strong); }
+  .tl-step { padding: var(--s5) 0 0 var(--s5); }
+  .tl-step + .tl-step { border-left: 0; padding-left: var(--s5); }
+  .tl-step::before, .tl-step + .tl-step::before { left: -4px; top: var(--s5); }
+}
+
+/* ---------- 4. load-bearing: A/B cards ---------- */
+.ab { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s5); margin-top: var(--s7); }
+.ab-card { border: 1px solid var(--line-strong); background: var(--surface); padding: var(--s6); display: flex; flex-direction: column; gap: var(--s4); }
+.ab-card .ab-sub { font-size: var(--fs-xs); color: var(--text-3); letter-spacing: 0.06em; }
+.ab-result { font-size: var(--fs-md); line-height: var(--lh-data); word-break: break-word; }
+.ab-card p { font-size: var(--fs-sm); line-height: var(--lh-data); max-width: none; margin-top: auto; }
+.ab-card.is-dead { background: var(--accent-wash); }
+.ab-card.is-held { background: var(--ok-wash); }
+.repro { margin-top: var(--s6); display: grid; gap: var(--s3); border-top: 1px solid var(--line); padding-top: var(--s5); }
+.repro div { font-size: var(--fs-sm); color: var(--text-3); }
+.repro a, .repro a code { word-break: break-all; overflow-wrap: anywhere; }
+.repro a { border-bottom-color: var(--line); }
+.repro a:hover { border-bottom-color: var(--text-3); }
+@media (max-width: 860px) { .ab { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- 5 & 6. findings: transcripts and pull-quote ---------- */
+.well { background: var(--well); border: 1px solid var(--line); }
+.well pre { padding: var(--s4) var(--s5); font-size: var(--fs-sm); line-height: 1.65; color: var(--text-2); white-space: pre; }
+.well pre b { color: var(--text); font-weight: 500; }
+.well-head {
+  display: flex; justify-content: space-between; align-items: center; gap: var(--s3);
+  padding: 9px var(--s5); border-bottom: 1px solid var(--line);
+  font-size: var(--fs-xs); color: var(--text-3);
+}
+.fa-grid { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: clamp(32px, 4vw, 56px); align-items: start; margin-top: var(--s6); }
+.fa-stack { display: grid; gap: var(--s5); min-width: 0; }
+.fa-stack p { font-size: var(--fs-sm); line-height: var(--lh-data); }
+.fa-grid .diagram, .fb-tail .diagram { max-width: 440px; }
+@media (max-width: 1080px) { .fa-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.quote-block { text-align: center; padding: var(--s8) 0 var(--s7); }
+.pullquote {
+  font: 500 clamp(19px, 3.2vw, 32px)/1.35 var(--mono);
+  color: var(--text); max-width: 24ch; margin: 0 auto; letter-spacing: -0.01em;
+}
+.mirror { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s7); margin-top: var(--s8); max-width: 900px; margin-left: auto; margin-right: auto; }
+.mirror div { border-top: 1px solid var(--line-strong); padding-top: var(--s4); }
+.mirror .m-state { font-size: var(--fs-sm); letter-spacing: 0.06em; }
+.mirror p { margin-top: var(--s2); font-size: var(--fs-sm); line-height: var(--lh-data); max-width: none; text-align: left; }
+.mirror div:last-child { text-align: right; }
+.mirror div:last-child p { text-align: right; }
+.fb-body { max-width: var(--measure); margin: var(--s8) auto 0; }
+.fb-body p + p { margin-top: var(--s4); }
+/* mirrored against .fa-grid on purpose: diagram left, transcript right */
+.fb-tail { display: grid; grid-template-columns: 440px minmax(0, 1fr); gap: clamp(32px, 4vw, 56px); align-items: start; margin-top: var(--s8); }
+@media (max-width: 1080px) { .fb-tail { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) {
+  .mirror { grid-template-columns: minmax(0, 1fr); gap: var(--s5); }
+  .mirror div:last-child, .mirror div:last-child p { text-align: left; }
+}
+
+/* ---------- 7. the fix: numbered stacked spec rows ---------- */
+.spec { border-top: 1px solid var(--line-strong); }
+.spec li { display: grid; grid-template-columns: 96px minmax(0, 1fr) 180px; gap: var(--s5); padding: var(--s6) 0; border-bottom: 1px solid var(--line); align-items: start; }
+.spec-n { font: 600 var(--fs-num)/1 var(--sans); font-variant-numeric: tabular-nums; color: var(--text-3); letter-spacing: var(--tr-display); }
+.spec-t { font-size: var(--fs-md); color: var(--text); line-height: 1.45; }
+.spec-c { margin-top: var(--s3); font-size: var(--fs-sm); color: var(--text-3); line-height: var(--lh-data); max-width: 62ch; }
+.spec-kill { font-size: var(--fs-xs); color: var(--text-3); border: 1px solid var(--line-strong); padding: 5px var(--s3); justify-self: start; white-space: nowrap; }
+@media (max-width: 860px) {
+  .spec li { grid-template-columns: 48px minmax(0, 1fr); gap: var(--s4); }
+  .spec-kill { grid-column: 2; }
+}
+
+/* ---------- 8. retraction and scope: prose with margin annotations ---------- */
+.eyebrow { font-size: var(--fs-micro); letter-spacing: var(--tr-caps); color: var(--text-3); text-transform: uppercase; margin-bottom: var(--s4); display: block; }
+.annot { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: var(--s6); align-items: start; padding: var(--s5) 0; }
+.annot + .annot { border-top: 1px solid var(--line); }
+.annot .m-note { font-size: var(--fs-xs); color: var(--text-3); line-height: var(--lh-data); padding-top: 4px; }
+.annot p { max-width: var(--measure); }
+.annot p + p { margin-top: var(--s4); }
+@media (max-width: 760px) {
+  .annot { grid-template-columns: minmax(0, 1fr); gap: var(--s3); }
+  .annot .m-note { border-left: 1px solid var(--line-strong); padding: 0 0 0 var(--s3); }
+}
+
+/* ---------- 9. run it: command tile grid ---------- */
+.tiles { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.3fr) minmax(0, 0.8fr); gap: var(--s5); align-items: start; }
+.tile { border: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; min-width: 0; }
+.tile-head { padding: var(--s4) var(--s5); border-bottom: 1px solid var(--line); font-size: var(--fs-base); color: var(--text); }
+.tile-body { padding: var(--s5); display: grid; gap: var(--s4); min-width: 0; }
+.cmd { position: relative; background: var(--well); border: 1px solid var(--line); }
+.cmd .cmd-bar { display: flex; justify-content: flex-end; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.cmd pre { padding: var(--s4); font-size: var(--fs-xs); line-height: 1.8; color: var(--text); white-space: pre; }
+.tile p { font-size: var(--fs-sm); line-height: var(--lh-data); max-width: none; }
+.run-tail { margin-top: var(--s7); padding-top: var(--s5); border-top: 1px solid var(--line); font-size: var(--fs-sm); color: var(--text-3); }
+.run-tail a { word-break: break-all; }
+/* below the full container width the three-up tiles would clip their commands, so they stack */
+@media (max-width: 1160px) { .tiles { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- footer ---------- */
+.foot { border-top: 1px solid var(--line); }
+.foot-in { max-width: var(--maxw); margin: 0 auto; padding: 0 var(--gutter); min-height: var(--nav-h); display: flex; align-items: center; gap: var(--s5); flex-wrap: wrap; }
+.foot-links { margin-left: auto; display: flex; gap: var(--s5); font-size: var(--fs-xs); }
+.foot-links a { color: var(--text-3); border-bottom: 1px solid transparent; padding-bottom: 2px; }
+.foot-links a:hover { color: var(--text); border-bottom-color: var(--line-strong); }
+.foot-links a:active { color: var(--text-2); }
+.foot-note { max-width: var(--maxw); margin: 0 auto; padding: 0 var(--gutter) var(--s6); font-size: var(--fs-xs); color: var(--text-3); }
+@media (max-width: 560px) {
+  .foot-in { display: block; padding-top: var(--s5); }
+  .foot-links { margin: var(--s4) 0 0; }
+}
+
+/* ---------- motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
+</style>
+</head>
+<body id="top">
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="nav-in">
+    <a class="wordmark" href="#top">DEAD<b>SWITCH</b></a>
+    <nav class="nav-links" aria-label="Page sections">
+      <a class="nav-anchors" href="#mechanism">mechanism</a>
+      <a class="nav-anchors" href="#demonstration">demonstration</a>
+      <a class="nav-anchors" href="#finding-a">findings</a>
+      <a class="nav-anchors" href="#evidence">evidence</a>
+      <a class="nav-anchors" href="#run-it">run it</a>
+      <a href="https://github.com/Nuel-osas/deadswitch">repo</a>
+      <a href="index.html">console</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ============ HERO ============ -->
+  <section class="hero wrap" aria-labelledby="hero-h">
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <h1 id="hero-h">The position dies when the collateral leaves.</h1>
+        <p class="hero-sub">Proven by an Attestcoin receipt from the source chain. No bridge, no relayer, no price feed.</p>
+        <p class="hero-note">Provable 8 to 10 minutes after inclusion, once the Sepolia block can no longer be reorged. We built the wait in; it is the finality guarantee, not lag.</p>
+        <div class="cta-row">
+          <a class="cta cta-primary" href="#demonstration">One proof, two managers</a>
+          <a class="cta cta-secondary" href="https://github.com/Nuel-osas/deadswitch">Open the repo</a>
+        </div>
+        <p class="hero-note">Below: two structural flaws in the tutorial's <code>USCBase</code>, both reproducible from a clone, and one claim of our own that we retracted after checking it.</p>
+      </div>
+
+      <div class="hero-panel">
+        <div class="chain">
+          <div class="chain-head"><span>Collateral vault</span><span class="id">Sepolia</span></div>
+          <div class="chain-body">
+            <span class="metric-label">collateral remaining</span>
+            <div class="metric">~0<span class="unit">TST</span></div>
+            <dl class="rows">
+              <div class="row"><dt>attested before</dt><dd>100 TST</dd></div>
+              <div class="row"><dt>exact remaining</dt><dd>1 wei</dd></div>
+              <div class="row"><dt>withdrawals</dt><dd>never blocked by the debt, always logged</dd></div>
+            </dl>
+          </div>
+        </div>
+        <div class="chain">
+          <div class="chain-head"><span>Debt position</span><span class="id">Creditcoin</span></div>
+          <div class="chain-body">
+            <span class="metric-label">position status</span>
+            <div class="metric dead">Liquidated</div>
+            <dl class="rows">
+              <div class="row"><dt>liquidation threshold</dt><dd>50 TST</dd></div>
+              <div class="row"><dt>attested collateral</dt><dd class="danger">~0 TST</dd></div>
+              <div class="row"><dt>liquidated</dt><dd>in the transaction that verified the proof</dd></div>
+            </dl>
+          </div>
+        </div>
+        <p class="panel-cap">A recorded reading from position #200, not a live feed: attested <code>100.000000000000000001</code>, then <code>0.000000000000000001</code>, against a <code>50.0</code> threshold. The console runs locally against both testnets.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 1. MECHANISM ============ -->
+  <section id="mechanism" class="wrap" aria-labelledby="mech-h">
+    <div class="sec-head">
+      <h2 id="mech-h">Collateral moves on Sepolia. The position dies on Creditcoin.</h2>
+    </div>
+
+    <div class="mech-panels">
+          <article class="mpanel">
+            <div class="mpanel-head">
+              <h3>CollateralVault</h3>
+              <span class="chain-tag">Ethereum Sepolia</span>
+            </div>
+            <p><code>withdraw()</code> never blocks on the debt. The vault cannot know your debt on another chain. What it guarantees instead is that every withdrawal emits <code>CollateralWithdrawn(positionId, amount, remaining)</code>.</p>
+          </article>
+          <article class="mpanel">
+            <div class="mpanel-head">
+              <h3>DeadswitchManagerV3</h3>
+              <span class="chain-tag">Creditcoin CC3</span>
+            </div>
+            <p><code>execute()</code> takes the encoded Sepolia transaction with its inclusion and continuity proofs and hands them to the <code>0x0FD2</code> precompile, which verifies them synchronously, in the same transaction. If the attested <code>remaining</code> is below the position's threshold, the position liquidates in that same transaction.</p>
+            <p class="note"><code>execute(chainKey, blockHeight, encodedTransaction, merkleRoot, siblings, lowerEndpointDigest, continuityRoots)</code>. No <code>action</code> parameter, by design: see Finding A.</p>
+          </article>
+        </div>
+
+        <ol class="steps">
+          <li>A withdrawal on Sepolia emits <code>CollateralWithdrawn(positionId, amount, remaining)</code>.</li>
+          <li>Creditcoin's attestors attest the Sepolia block. Continuity proofs chain the digests between attestation checkpoints.</li>
+          <li>Anyone fetches an inclusion and continuity proof and calls <code>DeadswitchManagerV3.execute()</code>. Submission is permissionless. Trust comes from the attestor quorum, not from the submitter.</li>
+          <li><code>0x0FD2</code> verifies the proof in-transaction. No callback, no second block.</li>
+          <li>Attested <code>remaining</code> below threshold liquidates the position. A proven top-up restores it. Same primitive, opposite direction.</li>
+    </ol>
+
+    <div class="diagram diagram--wide scroll-x" tabindex="0" role="region" aria-label="Architecture diagram, scrollable">
+<svg viewBox="0 0 900 412" width="100%" height="auto" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="ds-arch-t ds-arch-d" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+<title id="ds-arch-t">Deadswitch architecture: collateral on Sepolia, debt on Creditcoin, joined only by an Attestcoin receipt</title>
+<desc id="ds-arch-d">Three panels, left to right. On Ethereum Sepolia, CollateralVault at 0x8036 to EE412 never blocks a withdrawal, so every withdrawal is logged as CollateralWithdrawn carrying the remaining balance. Creditcoin's attestors read that Sepolia block over independent RPCs and reach quorum on it only once it can no longer be reorged, which takes about eight to ten minutes; continuity proofs chain the digests between attestation checkpoints. On Creditcoin CC3, anyone can submit the resulting inclusion and continuity proof to DeadswitchManagerV3 at 0x44e2 to bA682, where the 0x0FD2 precompile verifies it inside that same transaction. If the attested remaining collateral is below the position's minimum, the position is liquidated; a proven top-up restores it. A dashed line separates the Sepolia side from the Creditcoin side: the two contracts never call each other, and there is no bridge, no relayer and no price feed.</desc>
+<rect x="0" y="0" width="900" height="412" fill="#09090b"/>
+
+<text x="8" y="18" font-size="11" fill="#8b8b95" letter-spacing="0.07em">COLLATERAL ON ETHEREUM. DEBT ON CREDITCOIN.</text>
+<line x1="8" y1="30" x2="892" y2="30" stroke="#1f1f23" stroke-width="1"/>
+
+<line x1="274" y1="46" x2="274" y2="252" stroke="#2b2b31" stroke-width="1" stroke-dasharray="2 5"/>
+
+<rect x="8" y="46" width="250" height="200" fill="#101012" stroke="#1f1f23" stroke-width="1"/>
+<text x="20" y="66" font-size="11" fill="#8b8b95" letter-spacing="0.1em">ETHEREUM SEPOLIA</text>
+<line x1="8" y1="76" x2="258" y2="76" stroke="#1f1f23" stroke-width="1"/>
+<text x="20" y="97" font-size="13" fill="#e4e4e7">CollateralVault</text>
+<text x="20" y="113" font-size="11" fill="#8b8b95">0x8036...EE412</text>
+<rect x="20" y="126" width="226" height="50" fill="#09090b" stroke="#2b2b31" stroke-width="1"/>
+<text x="30" y="146" font-size="11" fill="#e4e4e7">CollateralWithdrawn(#200)</text>
+<text x="30" y="164" font-size="10.5" fill="#a1a1aa">remaining 0.000000000000000001</text>
+<text x="20" y="199" font-size="11" fill="#a1a1aa">it never blocks the withdrawal.</text>
+<text x="20" y="215" font-size="11" fill="#a1a1aa">it cannot know the debt, so it logs.</text>
+<text x="20" y="235" font-size="11" fill="#e4e4e7">that log is the whole trigger.</text>
+
+<line x1="258" y1="150" x2="284" y2="150" stroke="#8b8b95" stroke-width="1"/>
+<polygon points="284,146 290,150 284,154" fill="#8b8b95"/>
+
+<rect x="290" y="46" width="250" height="200" fill="#101012" stroke="#1f1f23" stroke-width="1"/>
+<text x="302" y="66" font-size="11" fill="#8b8b95" letter-spacing="0.1em">CREDITCOIN ATTESTORS</text>
+<line x1="290" y1="76" x2="540" y2="76" stroke="#1f1f23" stroke-width="1"/>
+<text x="302" y="106" font-size="20" fill="#e4e4e7">8 to 10 min</text>
+<text x="302" y="126" font-size="11" fill="#a1a1aa">quorum on the Sepolia block</text>
+<text x="302" y="152" font-size="11" fill="#e4e4e7">the finality gate. not lag.</text>
+<text x="302" y="176" font-size="11" fill="#a1a1aa">a block that can still be</text>
+<text x="302" y="190" font-size="11" fill="#a1a1aa">reorged is never attested.</text>
+<text x="302" y="215" font-size="11" fill="#a1a1aa">continuity proofs chain the</text>
+<text x="302" y="229" font-size="11" fill="#a1a1aa">gaps between checkpoints.</text>
+
+<line x1="540" y1="150" x2="566" y2="150" stroke="#8b8b95" stroke-width="1"/>
+<polygon points="566,146 572,150 566,154" fill="#8b8b95"/>
+
+<rect x="572" y="46" width="320" height="200" fill="#101012" stroke="#1f1f23" stroke-width="1"/>
+<text x="584" y="66" font-size="11" fill="#8b8b95" letter-spacing="0.1em">CREDITCOIN CC3</text>
+<line x1="572" y1="76" x2="892" y2="76" stroke="#1f1f23" stroke-width="1"/>
+<text x="584" y="97" font-size="13" fill="#e4e4e7">DeadswitchManagerV3</text>
+<text x="584" y="113" font-size="11" fill="#8b8b95">0x44e2...bA682</text>
+<rect x="584" y="126" width="296" height="50" fill="#09090b" stroke="#2b2b31" stroke-width="1"/>
+<text x="594" y="146" font-size="11" fill="#e4e4e7">0x0FD2 precompile</text>
+<text x="594" y="164" font-size="11" fill="#a1a1aa">verifies inside this same transaction</text>
+<text x="584" y="199" font-size="11" fill="#a1a1aa">anyone can submit the proof.</text>
+<text x="584" y="215" font-size="11" fill="#a1a1aa">trust is the attestor quorum,</text>
+<text x="584" y="229" font-size="11" fill="#a1a1aa">not the submitter.</text>
+
+<text x="8" y="274" font-size="11" fill="#8b8b95" letter-spacing="0.1em">WHY THERE IS NO ARROW BETWEEN THE CONTRACTS</text>
+<text x="8" y="298" font-size="11" fill="#e4e4e7">The two contracts never call each other.</text>
+<text x="8" y="316" font-size="11" fill="#a1a1aa">Creditcoin's own runtime verifies an attested Sepolia</text>
+<text x="8" y="330" font-size="11" fill="#a1a1aa">receipt. Nothing is bridged, forwarded or priced.</text>
+
+<text x="572" y="274" font-size="11" fill="#8b8b95" letter-spacing="0.1em">OUTCOME, IN THAT SAME TRANSACTION</text>
+<rect x="572" y="284" width="155" height="56" fill="#101012" stroke="#2b2b31" stroke-width="1"/>
+<text x="584" y="306" font-size="11" fill="#a1a1aa">remaining &lt; min</text>
+<text x="584" y="328" font-size="13" fill="#ff3b41">LIQUIDATED</text>
+<rect x="737" y="284" width="155" height="56" fill="#101012" stroke="#2b2b31" stroke-width="1"/>
+<text x="749" y="306" font-size="11" fill="#a1a1aa">a proven top-up</text>
+<text x="749" y="328" font-size="13" fill="#34d399">RESTORED</text>
+
+<line x1="8" y1="372" x2="892" y2="372" stroke="#1f1f23" stroke-width="1"/>
+<text x="8" y="392" font-size="11" fill="#8b8b95">no bridge. no relayer. no price feed.</text>
+</svg>
+    </div>
+
+    <p class="claims">
+      <span><b>No bridge.</b> The proof is checked against attested source-chain state inside Creditcoin's own runtime.</span>
+      <span><b>No relayer.</b> Our keeper is a convenience; any address can submit the same proof.</span>
+      <span><b>No price feed.</b> The liquidation condition is collateral quantity, read from Sepolia's own receipts.</span>
+    </p>
+  </section>
+
+  <!-- ============ 2. EVIDENCE ============ -->
+  <section id="demonstration" class="wrap" aria-labelledby="demo-h">
+    <div class="sec-head">
+      <span class="eyebrow">Demonstration 1</span>
+      <h2 id="demo-h">One proof. Two managers. One of them dies.</h2>
+      <p>Gluwa's loan tutorial already teaches emitter authentication and receipt-status checking: <code>USCLoanManager.sol:240</code> and <code>:267</code>, PR #92, commit <code>4ff9a3b</code>, 2026-07-29. Deadswitch implements all ten of the tutorial's guards, with the emitter check enforced as a skip rather than a revert; Finding B is why. We are not claiming the tutorial is missing them. What follows is what the tutorial does not have.</p>
+      <p><code>CollateralWithdrawn(uint256 indexed, uint256, uint256)</code> is a public event signature. Anyone can deploy a contract that emits it with someone else's <code>positionId</code> and <code>remaining = 0</code>. <code>MaliciousVault.forge()</code> does exactly that. The event is genuine. The proof is genuine. The vault is a lie.</p>
+      <p>The same proof, submitted to two contracts:</p>
+    </div>
+
+    <div class="ab">
+      <article class="ab-card is-dead">
+        <div>
+          <h3>NaiveManager</h3>
+          <span class="ab-sub">guards removed</span>
+        </div>
+        <div class="ab-result dead"><code>PositionLiquidated(#101)</code></div>
+        <p>A healthy position the attacker does not own.</p>
+      </article>
+      <article class="ab-card is-held">
+        <div>
+          <h3>DeadswitchManager v2</h3>
+          <span class="ab-sub">0x70FD...3BD4, emitter check intact</span>
+        </div>
+        <div class="ab-result alive">Reverts: <code>"Event not emitted by registered vault"</code></div>
+        <p>The forged proof bounces. The position survives. That exact string comes from <code>DeadswitchManager.sol:128</code>, which is the contract <code>yarn exploit</code> submits to.</p>
+      </article>
+    </div>
+
+    <div class="repro">
+      <p class="note">v3 rejects the same proof by a different route: it skips the foreign log rather than reverting on it, so nothing is left to apply and it reverts <code>"No vault collateral events in transaction"</code> (<code>DeadswitchManagerV3.sol:123</code>). Either way the position survives. The difference is Finding B.</p>
+      <p class="note">NaiveManager is a control we built by removing the checks. It is not a claim about anyone's code.</p>
+      <div>Forge tx: <a href="https://sepolia.etherscan.io/tx/0x4a039a4d60ecb3322ba00d416cf39e3ee5291e8669d5f67e172b0acd5c46721f"><code>0x4a039a4d60ecb3322ba00d416cf39e3ee5291e8669d5f67e172b0acd5c46721f</code></a></div>
+      <div>Reproduce: <code>yarn exploit &lt;tx&gt; &lt;positionId&gt;</code></div>
+    </div>
+  </section>
+
+  <!-- ============ 5. FINDING A ============ -->
+  <section id="finding-a" class="wrap" aria-labelledby="fa-h">
+    <div class="sec-head">
+      <span class="eyebrow">Finding A</span>
+      <h2 id="fa-h">USCBase burns the replay key before it looks at the action.</h2>
+      <p>The replay key omits the one field the caller controls.</p>
+    </div>
+
+    <div class="well scroll-x" tabindex="0" role="region" aria-label="Replay key source, scrollable"><pre>queryId = keccak256(chainKey, blockHeight, txIndex)   // USCBase.sol:30 calls _computeQueryId; the
+                                                     // keccak is at :80-86 and 'action' is not in it
+processedQueries[queryId] = true;                     // USCBase.sol:41, burned regardless of action</pre></div>
+
+    <div class="fa-grid">
+      <div class="fa-stack">
+        <p><code>action</code> is supplied by the caller. So a borrower emits a deposit and a withdrawal in one transaction and submits it as a deposit. The deposit branch records healthy collateral. The key is burned. The withdrawal in that same transaction can never be proven.</p>
+
+        <div class="well">
+          <div class="well-head"><span>Against v2 (inherits USCBase)</span><span>Creditcoin CC3</span></div>
+          <div class="scroll-x" tabindex="0" role="region" aria-label="Version 2 transcript, scrollable"><pre>  submitted as action=1 (DEPOSIT), hiding the withdrawal
+  <b>accepted.</b> attested collateral = 100.000000000000000001, status = <span class="alive">ACTIVE</span>
+  same transaction resubmitted as action=0 (WITHDRAWAL)
+  <span class="dead">REVERTED: "Query already processed"</span></pre></div>
+          <p class="verify">Verify on Creditcoin: <a href="https://creditcoin-testnet.blockscout.com/tx/0xad57de74857ebd0551b7c655707a74a38a7799b8390f3ae0dad4413d0b86162a"><code>0xad57de74…</code></a> — v2 emitted <code>CollateralAttested(200, …, 100.000000000000000001)</code> and <code>PositionRestored(200, …)</code> for a position whose collateral had already left.</p>
+        </div>
+
+        <p>The collateral is gone. The position reports 100 TST and ACTIVE. It can never be liquidated.</p>
+
+        <div class="well">
+          <div class="well-head"><span>Against v3</span><span>Creditcoin CC3</span></div>
+          <div class="scroll-x" tabindex="0" role="region" aria-label="Version 3 transcript, scrollable"><pre>  CollateralAttested(#200): remaining 100.000000000000000001
+  CollateralAttested(#200): remaining 0.000000000000000001
+  <span class="dead">PositionLiquidated(#200): 0.000000000000000001 &lt; 50.0</span></pre></div>
+          <p class="verify">Verify on Creditcoin: <a href="https://creditcoin-testnet.blockscout.com/tx/0xfc12b6871a52628ab4e2751a2997809c583241432849156f10536d16b301477d"><code>0xfc12b687…</code></a> — decoded <code>CollateralAttested(200, 100.000000000000000001)</code>, <code>CollateralAttested(200, 1 wei)</code>, <code>PositionLiquidated(200, 1 wei, 50.0)</code>.</p>
+        </div>
+
+        <p>Precondition: the attacker composes both vault calls into one transaction. Here that is <code>Attacker.suppress()</code> at <code>0x100fF3E7...C933</code>, which calls <code>vault.deposit()</code> and then <code>vault.withdraw()</code>. Any <code>USCBase</code> consumer whose vault permits that composition is affected, including Deadswitch v2, because <code>action</code> is not in the replay key.</p>
+
+        <div class="repro">
+          <div>Sepolia tx: <a href="https://sepolia.etherscan.io/tx/0x979a5719fce321311fc67388f09110831ebda6fb53d9ab244e45de54cedfffd3"><code>0x979a5719fce321311fc67388f09110831ebda6fb53d9ab244e45de54cedfffd3</code></a></div>
+          <div>Reproduce: <code>yarn attack suppression &lt;tx&gt; &lt;positionId&gt;</code></div>
+        </div>
+      </div>
+
+      <div class="diagram scroll-x" tabindex="0" role="region" aria-label="Finding A diagram, scrollable">
+<svg viewBox="0 0 400 716" width="100%" height="auto" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="ds-fa-t ds-fa-d" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+<title id="ds-fa-t">Finding A: action-selector suppression against a USCBase consumer, and the v3 fix</title>
+<desc id="ds-fa-d">One Sepolia transaction carries two logs from the registered CollateralVault: log zero is CollateralDeposited of one wei, log one is CollateralWithdrawn of the whole balance leaving one wei remaining. Against DeadswitchManager v2, which inherits the tutorial's USCBase, the attacker submits the transaction with action equal to one, the deposit branch. Log zero is consumed, the manager records attested collateral of 100.000000000000000001 and status ACTIVE, and the replay key keccak of chain key, block height and transaction index is burned. Because action is not part of that key, log one can never be read: resubmitting the same transaction as a withdrawal reverts with Query already processed. The collateral is gone while the position reports 100 TST and ACTIVE. Against DeadswitchManagerV3 there is no action parameter; the action is derived from each log's own topics and every vault log is applied in order, producing CollateralAttested at 100.000000000000000001, then CollateralAttested at 0.000000000000000001, then PositionLiquidated for position 200 because 0.000000000000000001 is below the 50.0 threshold.</desc>
+<rect x="0" y="0" width="400" height="716" fill="#09090b"/>
+
+<text x="6" y="16" font-size="11" fill="#a1a1aa" letter-spacing="0.07em">FINDING A. ACTION-SELECTOR SUPPRESSION</text>
+<text x="6" y="31" font-size="11" fill="#8b8b95">a flaw in USCBase itself. it defeats Deadswitch v2.</text>
+<line x1="6" y1="42" x2="394" y2="42" stroke="#1f1f23" stroke-width="1"/>
+
+<rect x="6" y="54" width="388" height="110" fill="#101012" stroke="#1f1f23" stroke-width="1"/>
+<text x="16" y="70" font-size="11" fill="#8b8b95" letter-spacing="0.1em">ONE SEPOLIA TRANSACTION</text>
+<text x="384" y="70" font-size="11" fill="#8b8b95" text-anchor="end">0x979a57...fffd3</text>
+<line x1="6" y1="78" x2="394" y2="78" stroke="#1f1f23" stroke-width="1"/>
+<rect x="16" y="86" width="26" height="15" fill="none" stroke="#2b2b31" stroke-width="1"/>
+<text x="29" y="97" font-size="11" fill="#a1a1aa" text-anchor="middle">[0]</text>
+<text x="50" y="97" font-size="11" fill="#e4e4e7">CollateralDeposited(1 wei)</text>
+<text x="384" y="97" font-size="11" fill="#8b8b95" text-anchor="end">CollateralVault</text>
+<rect x="16" y="110" width="26" height="15" fill="none" stroke="#2b2b31" stroke-width="1"/>
+<text x="29" y="121" font-size="11" fill="#a1a1aa" text-anchor="middle">[1]</text>
+<text x="50" y="121" font-size="11" fill="#e4e4e7">CollateralWithdrawn(all of it)</text>
+<text x="384" y="121" font-size="11" fill="#8b8b95" text-anchor="end">CollateralVault</text>
+<text x="50" y="135" font-size="11" fill="#a1a1aa">remaining 0.000000000000000001</text>
+<text x="16" y="155" font-size="11" fill="#8b8b95">both logs come from the registered vault.</text>
+
+<rect x="6" y="180" width="388" height="268" fill="#101012" stroke="#2b2b31" stroke-width="1"/>
+<text x="16" y="197" font-size="12.5" fill="#e4e4e7">DeadswitchManager v2</text>
+<text x="384" y="197" font-size="11" fill="#8b8b95" text-anchor="end">inherits USCBase</text>
+<line x1="6" y1="206" x2="394" y2="206" stroke="#1f1f23" stroke-width="1"/>
+
+<text x="16" y="224" font-size="11" fill="#a1a1aa">the attacker submits it as action = 1 (DEPOSIT)</text>
+<rect x="16" y="234" width="26" height="15" fill="none" stroke="#2b2b31" stroke-width="1"/>
+<text x="29" y="245" font-size="11" fill="#a1a1aa" text-anchor="middle">[0]</text>
+<text x="50" y="245" font-size="11" fill="#e4e4e7">consumed as a deposit</text>
+<text x="50" y="259" font-size="11" fill="#a1a1aa">attested collateral = 100.000000000000000001</text>
+<text x="50" y="273" font-size="11" fill="#34d399">status = ACTIVE</text>
+
+<rect x="16" y="284" width="26" height="15" fill="none" stroke="#45454d" stroke-width="1"/>
+<text x="29" y="295" font-size="11" fill="#8b8b95" text-anchor="middle">[1]</text>
+<rect x="50" y="282" width="334" height="36" fill="none" stroke="#45454d" stroke-width="1" stroke-dasharray="2 4"/>
+<text x="58" y="296" font-size="11" fill="#8b8b95">CollateralWithdrawn never read</text>
+<line x1="58" y1="292" x2="256" y2="292" stroke="#8b8b95" stroke-width="1"/>
+<text x="58" y="311" font-size="11" fill="#8b8b95">the caller chose which half of the tx is seen</text>
+
+<text x="16" y="337" font-size="11" fill="#a1a1aa">queryId = keccak(chainKey, blockHeight, txIndex)</text>
+<text x="16" y="351" font-size="11" fill="#ff3b41">action is not in that key. the query is burned.</text>
+
+<text x="16" y="375" font-size="11" fill="#a1a1aa">anyone resubmits it as action = 0 (WITHDRAWAL)</text>
+<text x="16" y="393" font-size="12" fill="#ff3b41">REVERTED</text>
+<text x="84" y="393" font-size="11" fill="#a1a1aa">Query already processed</text>
+
+<line x1="16" y1="408" x2="384" y2="408" stroke="#1f1f23" stroke-width="1"/>
+<text x="16" y="426" font-size="11" fill="#ff3b41">the collateral is gone. the position reports</text>
+<text x="16" y="440" font-size="11" fill="#ff3b41">100 TST and ACTIVE. it can never be liquidated.</text>
+
+<rect x="6" y="464" width="388" height="192" fill="#101012" stroke="#2b2b31" stroke-width="1"/>
+<text x="16" y="481" font-size="12.5" fill="#e4e4e7">DeadswitchManagerV3</text>
+<text x="384" y="481" font-size="11" fill="#8b8b95" text-anchor="end">DeadswitchBase</text>
+<line x1="6" y1="490" x2="394" y2="490" stroke="#1f1f23" stroke-width="1"/>
+<text x="16" y="508" font-size="11" fill="#a1a1aa">no action parameter. the action comes from each</text>
+<text x="16" y="522" font-size="11" fill="#a1a1aa">log's own topics[0], and both logs are applied.</text>
+
+<rect x="16" y="534" width="26" height="15" fill="none" stroke="#2b2b31" stroke-width="1"/>
+<text x="29" y="545" font-size="11" fill="#a1a1aa" text-anchor="middle">[0]</text>
+<text x="50" y="545" font-size="11" fill="#e4e4e7">CollateralAttested(#200)</text>
+<text x="50" y="559" font-size="11" fill="#a1a1aa">remaining 100.000000000000000001</text>
+<rect x="16" y="570" width="26" height="15" fill="none" stroke="#2b2b31" stroke-width="1"/>
+<text x="29" y="581" font-size="11" fill="#a1a1aa" text-anchor="middle">[1]</text>
+<text x="50" y="581" font-size="11" fill="#e4e4e7">CollateralAttested(#200)</text>
+<text x="50" y="595" font-size="11" fill="#a1a1aa">remaining 0.000000000000000001</text>
+
+<line x1="16" y1="608" x2="384" y2="608" stroke="#1f1f23" stroke-width="1"/>
+<text x="16" y="627" font-size="12.5" fill="#ff3b41">PositionLiquidated(#200)</text>
+<text x="16" y="643" font-size="11" fill="#a1a1aa">0.000000000000000001 &lt; 50.0 threshold</text>
+
+<line x1="6" y1="672" x2="394" y2="672" stroke="#1f1f23" stroke-width="1"/>
+<text x="6" y="688" font-size="11" fill="#8b8b95">v2 0x70FD...3BD4</text>
+<text x="140" y="688" font-size="11" fill="#8b8b95">v3 0x44e2...bA682</text>
+<text x="384" y="688" font-size="11" fill="#8b8b95" text-anchor="end">CREDITCOIN CC3</text>
+<text x="6" y="703" font-size="11" fill="#8b8b95">yarn attack suppression 0x979a57...fffd3 200</text>
+</svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 6. FINDING B ============ -->
+  <section id="finding-b" class="wrap" aria-labelledby="fb-h">
+    <div class="sec-head sec-head--center">
+      <span class="eyebrow">Finding B</span>
+      <h2 id="fb-h">The same revert string is the hero in one demo and the weapon in the other.</h2>
+    </div>
+
+    <figure class="quote-block">
+      <blockquote class="pullquote">"Event not emitted by registered vault"</blockquote>
+    </figure>
+
+    <div class="mirror">
+      <div>
+        <div class="m-state alive">the guard held</div>
+        <p><strong>In Demonstration 1, the v2 guard saves a position.</strong> The forged event bounces off <code>require(log.address_ == sourceVault)</code>.</p>
+      </div>
+      <div>
+        <div class="m-state dead">the position died</div>
+        <p><strong>Here the same v2 guard destroys one.</strong> A <code>USCBase</code> consumer reads <code>logs[0]</code> and reverts the whole transaction if the emitter check fails.</p>
+      </div>
+    </div>
+
+    <div class="fb-body">
+      <p>Prefix a decoy <code>CollateralWithdrawn</code> from a throwaway contract in the same transaction as the genuine withdrawal, and the genuine withdrawal is permanently unprovable. Against v2, every submission reverts with that string, forever. The collateral left and the position cannot be told.</p>
+      <p>A guard that rejects a whole transaction because of one log it does not own is a denial-of-service primitive. The same <code>logs[0]</code> shortcut is in the tutorial at <code>USCLoanManager.sol:254-257</code>.</p>
+    </div>
+
+    <div class="fb-tail">
+      <div class="diagram scroll-x" tabindex="0" role="region" aria-label="Finding B diagram, scrollable">
+<svg viewBox="0 0 400 706" width="100%" height="auto" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="ds-fb-t ds-fb-d" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+<title id="ds-fb-t">Finding B: decoy-log censorship turns the emitter guard into a denial of service, and the v3 fix</title>
+<desc id="ds-fb-d">One Sepolia transaction carries two logs. Log zero is a decoy CollateralWithdrawn emitted by DecoyVault, a throwaway contract that is not a registered vault. Log one is the genuine CollateralWithdrawn from CollateralVault leaving remaining at zero. DeadswitchManager v2 reads logs index zero only, applies the emitter check requiring the log address to equal the registered source vault, and reverts the entire transaction with Event not emitted by registered vault. Log one never reaches the manager, so the genuine withdrawal is permanently unprovable. This is the same guard that correctly rejects a forged vault in the exploit demonstration; a guard that rejects a whole transaction because of one log it does not own is a denial-of-service primitive. DeadswitchManagerV3 skips foreign logs instead of reverting on them, applies the genuine log, emits CollateralAttested for position 201 with remaining zero, and liquidates because zero is below the 50.0 threshold.</desc>
+<rect x="0" y="0" width="400" height="706" fill="#09090b"/>
+
+<text x="6" y="16" font-size="11" fill="#a1a1aa" letter-spacing="0.07em">FINDING B. DECOY-LOG CENSORSHIP</text>
+<text x="6" y="31" font-size="11" fill="#8b8b95">the emitter guard becomes the censorship vector.</text>
+<line x1="6" y1="42" x2="394" y2="42" stroke="#1f1f23" stroke-width="1"/>
+
+<rect x="6" y="54" width="388" height="122" fill="#101012" stroke="#1f1f23" stroke-width="1"/>
+<text x="16" y="70" font-size="11" fill="#8b8b95" letter-spacing="0.1em">ONE SEPOLIA TRANSACTION</text>
+<text x="384" y="70" font-size="11" fill="#8b8b95" text-anchor="end">0x6f88a9...1bfa3</text>
+<line x1="6" y1="78" x2="394" y2="78" stroke="#1f1f23" stroke-width="1"/>
+<rect x="16" y="86" width="26" height="15" fill="none" stroke="#2b2b31" stroke-width="1"/>
+<text x="29" y="97" font-size="11" fill="#a1a1aa" text-anchor="middle">[0]</text>
+<text x="50" y="97" font-size="11" fill="#a1a1aa">CollateralWithdrawn(#201)</text>
+<text x="384" y="97" font-size="11" fill="#ff3b41" text-anchor="end">DecoyVault</text>
+<text x="50" y="111" font-size="11" fill="#8b8b95">0x00c7...Fa3E</text>
+<text x="384" y="111" font-size="11" fill="#8b8b95" text-anchor="end">not registered</text>
+<rect x="16" y="124" width="26" height="15" fill="none" stroke="#2b2b31" stroke-width="1"/>
+<text x="29" y="135" font-size="11" fill="#a1a1aa" text-anchor="middle">[1]</text>
+<text x="50" y="135" font-size="11" fill="#e4e4e7">CollateralWithdrawn(#201)</text>
+<text x="384" y="135" font-size="11" fill="#e4e4e7" text-anchor="end">CollateralVault</text>
+<text x="50" y="149" font-size="11" fill="#8b8b95">0x8036...EE412</text>
+<text x="384" y="149" font-size="11" fill="#a1a1aa" text-anchor="end">remaining 0.0</text>
+<text x="16" y="168" font-size="11" fill="#8b8b95">the decoy costs one throwaway contract.</text>
+
+<rect x="6" y="192" width="388" height="260" fill="#101012" stroke="#2b2b31" stroke-width="1"/>
+<text x="16" y="209" font-size="12.5" fill="#e4e4e7">DeadswitchManager v2</text>
+<text x="384" y="209" font-size="11" fill="#8b8b95" text-anchor="end">reads logs[0]</text>
+<line x1="6" y1="218" x2="394" y2="218" stroke="#1f1f23" stroke-width="1"/>
+
+<text x="16" y="236" font-size="11" fill="#a1a1aa">the consumer reads logs[0] and checks the emitter.</text>
+<rect x="16" y="246" width="368" height="26" fill="#09090b" stroke="#2b2b31" stroke-width="1"/>
+<text x="26" y="263" font-size="11" fill="#a1a1aa">require(log.address_ == sourceVault)</text>
+<text x="16" y="292" font-size="12" fill="#ff3b41">REVERTED</text>
+<text x="16" y="308" font-size="11" fill="#a1a1aa">"Event not emitted by registered vault"</text>
+
+<rect x="16" y="322" width="368" height="38" fill="none" stroke="#45454d" stroke-width="1" stroke-dasharray="2 4"/>
+<text x="26" y="338" font-size="11" fill="#8b8b95">[1] CollateralWithdrawn(#201)</text>
+<line x1="26" y1="334" x2="217" y2="334" stroke="#8b8b95" stroke-width="1"/>
+<text x="26" y="352" font-size="11" fill="#8b8b95">never reached it. the whole tx reverted.</text>
+
+<rect x="16" y="372" width="368" height="66" fill="#09090b" stroke="#2b2b31" stroke-width="1"/>
+<text x="26" y="389" font-size="11" fill="#e4e4e7">the same guard that stops a forged vault in the</text>
+<text x="26" y="403" font-size="11" fill="#a1a1aa">exploit demo destroys the position here. a guard</text>
+<text x="26" y="417" font-size="11" fill="#a1a1aa">that rejects a whole transaction over one log it</text>
+<text x="26" y="431" font-size="11" fill="#a1a1aa">does not own is a denial-of-service primitive.</text>
+
+<rect x="6" y="468" width="388" height="170" fill="#101012" stroke="#2b2b31" stroke-width="1"/>
+<text x="16" y="485" font-size="12.5" fill="#e4e4e7">DeadswitchManagerV3</text>
+<text x="384" y="485" font-size="11" fill="#8b8b95" text-anchor="end">DeadswitchBase</text>
+<line x1="6" y1="494" x2="394" y2="494" stroke="#1f1f23" stroke-width="1"/>
+<text x="16" y="512" font-size="11" fill="#a1a1aa">foreign logs are skipped, never reverted on.</text>
+<rect x="16" y="524" width="26" height="15" fill="none" stroke="#45454d" stroke-width="1"/>
+<text x="29" y="535" font-size="11" fill="#8b8b95" text-anchor="middle">[0]</text>
+<text x="50" y="535" font-size="11" fill="#8b8b95">emitter != registered vault. skipped.</text>
+<rect x="16" y="548" width="26" height="15" fill="none" stroke="#2b2b31" stroke-width="1"/>
+<text x="29" y="559" font-size="11" fill="#a1a1aa" text-anchor="middle">[1]</text>
+<text x="50" y="559" font-size="11" fill="#e4e4e7">CollateralAttested(#201)</text>
+<text x="50" y="573" font-size="11" fill="#a1a1aa">remaining 0.0</text>
+<line x1="16" y1="588" x2="384" y2="588" stroke="#1f1f23" stroke-width="1"/>
+<text x="16" y="607" font-size="12.5" fill="#ff3b41">PositionLiquidated(#201)</text>
+<text x="16" y="623" font-size="11" fill="#a1a1aa">0.0 &lt; 50.0 threshold</text>
+
+<line x1="6" y1="662" x2="394" y2="662" stroke="#1f1f23" stroke-width="1"/>
+<text x="6" y="678" font-size="11" fill="#8b8b95">v2 0x70FD...3BD4</text>
+<text x="140" y="678" font-size="11" fill="#8b8b95">v3 0x44e2...bA682</text>
+<text x="384" y="678" font-size="11" fill="#8b8b95" text-anchor="end">CREDITCOIN CC3</text>
+<text x="6" y="693" font-size="11" fill="#8b8b95">yarn attack decoy 0x6f88a9...1bfa3 201</text>
+</svg>
+      </div>
+
+      <div>
+        <div class="well">
+          <div class="well-head"><span>Against v3</span><span>Creditcoin CC3</span></div>
+          <div class="scroll-x" tabindex="0" role="region" aria-label="Finding B version 3 transcript, scrollable"><pre>  CollateralAttested(#201): remaining 0.0
+  <span class="dead">PositionLiquidated(#201): 0.0 &lt; 50.0</span></pre></div>
+          <p class="verify">Verify on Creditcoin: <a href="https://creditcoin-testnet.blockscout.com/tx/0x4e2fb7d6e3c537c3fc64fd270192fd86bcefc4bf12ef8b4c0a5d8827492009ae"><code>0x4e2fb7d6…</code></a> — decoded <code>CollateralAttested(201, 0)</code>, <code>PositionLiquidated(201, 0, 50.0)</code>.</p>
+        </div>
+        <div class="repro">
+          <div>Sepolia tx: <a href="https://sepolia.etherscan.io/tx/0x6f88a998739bb6a9f11d252d4a35ce4f327cfc8567af3731c4eabf354b31bfa3"><code>0x6f88a998739bb6a9f11d252d4a35ce4f327cfc8567af3731c4eabf354b31bfa3</code></a></div>
+          <div>Reproduce: <code>yarn attack decoy &lt;tx&gt; &lt;positionId&gt;</code></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 7. THE FIX ============ -->
+  <section id="the-fix" class="wrap" aria-labelledby="fix-h">
+    <div class="sec-head">
+      <h2 id="fix-h">DeadswitchBase.sol replaces USCBase in four places.</h2>
+    </div>
+
+    <ol class="spec">
+      <li>
+        <div class="spec-n">01</div>
+        <div>
+          <div class="spec-t"><code>action</code> is deleted from the external ABI.</div>
+          <p class="spec-c">The action is derived from each log's own <code>topics[0]</code>. A caller cannot choose which half of a transaction gets seen.</p>
+        </div>
+        <div class="spec-kill">kills Finding A</div>
+      </li>
+      <li>
+        <div class="spec-n">02</div>
+        <div>
+          <div class="spec-t">Every log from the registered vault is applied, in log order.</div>
+          <p class="spec-c">One transaction carrying a deposit and a withdrawal produces both state transitions, in the right sequence.</p>
+        </div>
+        <div class="spec-kill">kills Finding A</div>
+      </li>
+      <li>
+        <div class="spec-n">03</div>
+        <div>
+          <div class="spec-t">Foreign logs are skipped, never reverted on.</div>
+          <p class="spec-c">A decoy cannot censor a genuine event, without weakening the emitter check on the logs that matter.</p>
+        </div>
+        <div class="spec-kill">kills Finding B</div>
+      </li>
+      <li>
+        <div class="spec-n">04</div>
+        <div>
+          <div class="spec-t"><code>blockHeight</code> is threaded into the handler and stored per position.</div>
+          <p class="spec-c">A stale proof cannot overwrite newer attested state. <code>USCBase</code> passes only the <code>queryId</code>, which makes this guard impossible to write.</p>
+        </div>
+        <div class="spec-kill">stale-proof guard</div>
+      </li>
+    </ol>
+
+    <p class="note ledger-note">Both findings are written up for upstream disclosure to <code>gluwa/usc-testnet-bridge-examples</code>. <code>SECURITY.md</code> in the repo is the write-up.</p>
+  </section>
+
+  <!-- ============ 8. RETRACTION AND SCOPE ============ -->
+  <section id="evidence" class="wrap" aria-labelledby="ev-h">
+    <div class="sec-head">
+      <h2 id="ev-h">Every contract and every claim below is on a public testnet right now.</h2>
+    </div>
+
+    <h3 class="sub-head">Deployments</h3>
+    <div class="scroll-x" tabindex="0" role="region" aria-label="Deployment ledger, scrollable">
+      <table class="ledger">
+        <caption class="sr-only">Deadswitch contract deployments on Ethereum Sepolia and Creditcoin CC3</caption>
+        <thead>
+          <tr>
+            <th scope="col">Contract</th>
+            <th scope="col">Chain</th>
+            <th scope="col">Address</th>
+            <th scope="col">Why it exists</th>
+            <th scope="col"><span class="sr-only">Copy address</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th scope="rowgroup" colspan="5">Live and current</th></tr>
+          <tr>
+            <td class="c-name">DeadswitchManagerV3</td>
+            <td class="c-chain">Creditcoin CC3</td>
+            <td class="c-addr"><a href="https://creditcoin-testnet.blockscout.com/address/0x44e2d55Af74f400b97fBC010Acd504A1458bA682" title="verified on Blockscout"><code id="a1">0x44e2d55Af74f400b97fBC010Acd504A1458bA682</code></a></td>
+            <td class="c-why">The current manager. Consumes the <code>0x0FD2</code> precompile.</td>
+            <td class="c-copy"><button class="copy-btn" data-copy="a1" aria-label="Copy DeadswitchManagerV3 address">copy</button></td>
+          </tr>
+          <tr>
+            <td class="c-name">CollateralVault</td>
+            <td class="c-chain">Sepolia</td>
+            <td class="c-addr"><code id="a2">0x80366d27b907828A36243140ce6ACED6350EE412</code></td>
+            <td class="c-why">Holds the collateral. Emits every withdrawal.</td>
+            <td class="c-copy"><button class="copy-btn" data-copy="a2" aria-label="Copy CollateralVault address">copy</button></td>
+          </tr>
+          <tr>
+            <td class="c-name">TestERC20 (TST)</td>
+            <td class="c-chain">Sepolia</td>
+            <td class="c-addr"><a href="https://creditcoin-testnet.blockscout.com/address/0xe12EEc4cD89F695A709e27E8ceb01b213fcd9a0c" title="verified on Blockscout"><code id="a3">0xe12EEc4cD89F695A709e27E8ceb01b213fcd9a0c</code></a></td>
+            <td class="c-why">The collateral asset. Shares an address with DeadswitchManager v1 on CC3: same deployer, same nonce, two chains.</td>
+            <td class="c-copy"><button class="copy-btn" data-copy="a3" aria-label="Copy TestERC20 address">copy</button></td>
+          </tr>
+        </tbody>
+        <tbody>
+          <tr><th scope="rowgroup" colspan="5">Kept so the security demos stay reproducible</th></tr>
+          <tr>
+            <td class="c-name">DeadswitchManager v2</td>
+            <td class="c-chain">Creditcoin CC3</td>
+            <td class="c-addr"><a href="https://creditcoin-testnet.blockscout.com/address/0x70FD9432620accb22E015E3929FF948B41aa3BD4" title="verified on Blockscout"><code id="a4">0x70FD9432620accb22E015E3929FF948B41aa3BD4</code></a></td>
+            <td class="c-why">Inherits the tutorial's <code>USCBase</code>. The contract the attacks defeat.</td>
+            <td class="c-copy"><button class="copy-btn" data-copy="a4" aria-label="Copy DeadswitchManager v2 address">copy</button></td>
+          </tr>
+          <tr>
+            <td class="c-name">DeadswitchManager v1</td>
+            <td class="c-chain">Creditcoin CC3</td>
+            <td class="c-addr"><a href="https://creditcoin-testnet.blockscout.com/address/0xe12EEc4cD89F695A709e27E8ceb01b213fcd9a0c" title="verified on Blockscout"><code id="a5">0xe12EEc4cD89F695A709e27E8ceb01b213fcd9a0c</code></a></td>
+            <td class="c-why">Carries the first live liquidations. Same address as TestERC20 above, on a different chain: same deployer, same nonce.</td>
+            <td class="c-copy"><button class="copy-btn" data-copy="a5" aria-label="Copy DeadswitchManager v1 address">copy</button></td>
+          </tr>
+          <tr>
+            <td class="c-name">NaiveManager</td>
+            <td class="c-chain">Creditcoin CC3</td>
+            <td class="c-addr"><a href="https://creditcoin-testnet.blockscout.com/address/0x9EdeA943Bc77caF9cB892077575E2d7E7f2B5142" title="verified on Blockscout"><code id="a6">0x9EdeA943Bc77caF9cB892077575E2d7E7f2B5142</code></a></td>
+            <td class="c-why">Control. Guards removed.</td>
+            <td class="c-copy"><button class="copy-btn" data-copy="a6" aria-label="Copy NaiveManager address">copy</button></td>
+          </tr>
+        </tbody>
+        <tbody class="g-adv">
+          <tr><th scope="rowgroup" colspan="5">Adversarial contracts</th></tr>
+          <tr>
+            <td class="c-name">MaliciousVault</td>
+            <td class="c-chain">Sepolia</td>
+            <td class="c-addr"><code id="a7">0x8e1a6afA1EAC9e3Ac266c4e76D9b79835606C604</code></td>
+            <td class="c-why">Forges the event in Demonstration 1.</td>
+            <td class="c-copy"><button class="copy-btn" data-copy="a7" aria-label="Copy MaliciousVault address">copy</button></td>
+          </tr>
+          <tr>
+            <td class="c-name">DecoyVault</td>
+            <td class="c-chain">Sepolia</td>
+            <td class="c-addr"><code id="a8">0x00c7c4807981045550f582726f8133459e36Fa3E</code></td>
+            <td class="c-why">Emits the decoy log in Finding B.</td>
+            <td class="c-copy"><button class="copy-btn" data-copy="a8" aria-label="Copy DecoyVault address">copy</button></td>
+          </tr>
+          <tr>
+            <td class="c-name">Attacker</td>
+            <td class="c-chain">Sepolia</td>
+            <td class="c-addr"><code id="a9">0x100fF3E7E7A115E181a0aC06d8a004dcbCccC933</code></td>
+            <td class="c-why">Builds the two-log transactions.</td>
+            <td class="c-copy"><button class="copy-btn" data-copy="a9" aria-label="Copy Attacker address">copy</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note ledger-note">All addresses and transactions are testnet: Sepolia and Creditcoin CC3.</p>
+
+    <h3 class="sub-head sub-head--gap">Transactions</h3>
+    <p class="note ledger-note">Each hash below is the Sepolia cause. The Creditcoin effect it produces is named beside it, and every one of them is reproducible from a clone with the commands in <a href="#run-it">Run it</a>.</p>
+    <ol class="tx-list">
+      <li>
+        <span class="tx-label">Proven kill</span>
+        <a class="tx-hash" href="https://sepolia.etherscan.io/tx/0x87585c3b4d832d8519220cfe8da89a924500da931537bbff04e01c7b20784b10"><code>0x87585c3b4d832d8519220cfe8da89a924500da931537bbff04e01c7b20784b10</code></a>
+        <p class="tx-desc">Sepolia cause: withdrawal 100 to 40 TST on position #1, threshold 50. Creditcoin effect: proof submitted, <code>PositionLiquidated(1, 40e18, 50e18)</code>.</p>
+      </li>
+      <li>
+        <span class="tx-label">Forged event</span>
+        <a class="tx-hash" href="https://sepolia.etherscan.io/tx/0x4a039a4d60ecb3322ba00d416cf39e3ee5291e8669d5f67e172b0acd5c46721f"><code>0x4a039a4d60ecb3322ba00d416cf39e3ee5291e8669d5f67e172b0acd5c46721f</code></a>
+        <p class="tx-desc">Sepolia cause: MaliciousVault emits <code>CollateralWithdrawn</code> for position #101, which it does not own. Creditcoin effect: NaiveManager liquidates #101; the emitter check rejects the same proof.</p>
+      </li>
+      <li>
+        <span class="tx-label">Action-selector suppression</span>
+        <a class="tx-hash" href="https://sepolia.etherscan.io/tx/0x979a5719fce321311fc67388f09110831ebda6fb53d9ab244e45de54cedfffd3"><code>0x979a5719fce321311fc67388f09110831ebda6fb53d9ab244e45de54cedfffd3</code></a>
+        <p class="tx-desc">Sepolia cause: one transaction carrying a deposit and a withdrawal on position #200. Creditcoin effect: v2 accepts it as a deposit and burns the key; v3 liquidates #200. Finding A.</p>
+      </li>
+      <li>
+        <span class="tx-label">Decoy-log censorship</span>
+        <a class="tx-hash" href="https://sepolia.etherscan.io/tx/0x6f88a998739bb6a9f11d252d4a35ce4f327cfc8567af3731c4eabf354b31bfa3"><code>0x6f88a998739bb6a9f11d252d4a35ce4f327cfc8567af3731c4eabf354b31bfa3</code></a>
+        <p class="tx-desc">Sepolia cause: a decoy <code>CollateralWithdrawn</code> prefixed before the genuine withdrawal on position #201. Creditcoin effect: v2 reverts forever; v3 liquidates #201. Finding B.</p>
+      </li>
+    </ol>
+
+    <p class="note ledger-note">Position IDs on this page: <strong>#1</strong> the first proven kill, <strong>#3</strong> the live position the console watches, staged in <code>.env.example</code>, <strong>#101</strong> the forged-event target, <strong>#200</strong> Finding A, <strong>#201</strong> Finding B.</p>
+  </section>
+
+  <!-- ============ 3. FINALITY ============ -->
+  <section id="finality" class="wrap" aria-labelledby="fin-h">
+    <div class="sec-head">
+      <h2 id="fin-h">The eight to ten minutes are not lag. They are the finality guarantee, and we built them in.</h2>
+    </div>
+
+    <p class="finality-lead">A Sepolia event becomes provable roughly 8 to 10 minutes after inclusion, because attestors wait out the source chain's reversion risk before they attest. That wait is the protection: fire a liquidation on a block that can still be reorged and the liquidation can be un-happened, leaving a dead position on Creditcoin whose triggering withdrawal no longer exists. Deadswitch never acts on a block that can still disappear.</p>
+    <p class="finality-lead">Quorum resists forgery structurally: honest attestors follow the canonical chain through independent RPCs and compute identical digests, and a fabricated block changes every digest after it, so it never reaches quorum.</p>
+
+    <ol class="timeline">
+      <li class="tl-step">
+        <div class="tl-when">T+0</div>
+        <p>Withdrawal included in a Sepolia block. <code>CollateralWithdrawn</code> is in the receipt.</p>
+      </li>
+      <li class="tl-step">
+        <div class="tl-when">T+8 to 10 min</div>
+        <p>Attestors reach quorum on the block. Continuity proofs chain the digests between checkpoints.</p>
+      </li>
+      <li class="tl-step">
+        <div class="tl-when">Same transaction</div>
+        <p>Anyone submits. <code>0x0FD2</code> verifies, the manager decodes and authenticates the log, the position liquidates.</p>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ============ 4. LOAD-BEARING ============ -->
+  <section id="retraction" class="wrap" aria-labelledby="ret-h">
+    <div class="sec-head">
+      <span class="eyebrow">Retraction</span>
+      <h2 id="ret-h">One claim did not survive checking, so we deleted it.</h2>
+    </div>
+
+    <div class="annot">
+      <div class="m-note">eip-658</div>
+      <div>
+        <p>An earlier draft of our security document claimed a reverted source transaction could carry a <code>CollateralWithdrawn</code> log. That is wrong. Under EIP-658 a reverted transaction's receipt carries no logs at all, so the log-presence check subsumes the status check on EVM sources.</p>
+      </div>
+    </div>
+    <div class="annot">
+      <div class="m-note">kept as an invariant, not claimed as an exploit</div>
+      <div>
+        <p><code>require(receiptStatus == 1)</code> stays in the contract as an explicit invariant. It covers non-EVM source chains and decoder changes, where that guarantee does not hold. It is not a demonstrable exploit and we no longer claim it is.</p>
+      </div>
+    </div>
+    <div class="annot">
+      <div class="m-note">mvp boundary</div>
+      <div>
+        <p><strong>Scope.</strong> This is an MVP and the boundary is drawn on purpose. One collateral asset. One source chain. Liquidation and restore. Positions are owner-registered: there is no lender-matching market, no interest accrual, no auctions.</p>
+        <p><strong>What liquidation does on-chain.</strong> It sets the position's status to <code>Liquidated</code> and emits <code>PositionLiquidated(positionId, remainingCollateral, minCollateral)</code>. Nothing settles: no seizure, no transfer, no auction. A proven top-up back above the threshold flips the status to <code>Active</code> and emits <code>PositionRestored</code>. The state transition is the product here; the settlement layer is not.</p>
+        <p>The submission is the trust-minimized liquidation primitive and the security work around it. A lending product sits on top of this; it is not what we are showing you.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 9. RUN IT ============ -->
+  <section id="run-it" class="wrap" aria-labelledby="run-h">
+    <div class="sec-head">
+      <h2 id="run-h">It runs from a clone and a testnet key.</h2>
+    </div>
+
+    <div class="tiles">
+      <article class="tile">
+        <h3 class="tile-head">Start it</h3>
+        <div class="tile-body">
+          <div class="cmd">
+            <div class="cmd-bar"><button class="copy-btn" data-copy="cmd-start" aria-label="Copy the install and start commands">copy</button></div>
+            <div class="scroll-x" tabindex="0" role="region" aria-label="Install and start commands, scrollable"><pre id="cmd-start">yarn install &amp;&amp; cp .env.example .env
+yarn server</pre></div>
+          </div>
+          <p class="note">Add a testnet key to <code>.env</code>. Console UI and the permissionless keeper come up on <code>http://127.0.0.1:4020</code>. Withdraw on the Sepolia pane, watch the position die on the Creditcoin pane, with the attestation progress between them. <a href="index.html">Open the console</a>.</p>
+        </div>
+      </article>
+
+      <article class="tile">
+        <h3 class="tile-head">Reproduce Finding A or Finding B</h3>
+        <div class="tile-body">
+          <div class="cmd">
+            <div class="cmd-bar"><button class="copy-btn" data-copy="cmd-attack" aria-label="Copy the attack command">copy</button></div>
+            <div class="scroll-x" tabindex="0" role="region" aria-label="Attack command, scrollable"><pre id="cmd-attack">yarn attack &lt;suppression|decoy&gt; &lt;tx&gt; &lt;positionId&gt;</pre></div>
+          </div>
+          <p class="note">Runs the chosen finding against v2 and v3. v2 fails, v3 liquidates correctly.</p>
+        </div>
+      </article>
+
+      <article class="tile">
+        <h3 class="tile-head">Reproduce the forged-event demonstration</h3>
+        <div class="tile-body">
+          <div class="cmd">
+            <div class="cmd-bar"><button class="copy-btn" data-copy="cmd-exploit" aria-label="Copy the exploit command">copy</button></div>
+            <div class="scroll-x" tabindex="0" role="region" aria-label="Exploit command, scrollable"><pre id="cmd-exploit">yarn exploit &lt;tx&gt; &lt;positionId&gt;</pre></div>
+          </div>
+          <p class="note">Submits one proof to NaiveManager and to Deadswitch.</p>
+        </div>
+      </article>
+    </div>
+
+    <p class="run-tail">Contracts, keeper, attack scripts and <code>SECURITY.md</code>: <a href="https://github.com/Nuel-osas/deadswitch">Open the repo</a> at <code>github.com/Nuel-osas/deadswitch</code></p>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="foot-in">
+    <span class="wordmark">DEAD<b>SWITCH</b></span>
+    <div class="foot-links">
+      <a href="https://github.com/Nuel-osas/deadswitch">Open the repo</a>
+      <a href="index.html">Open the console</a>
+    </div>
+  </div>
+  <p class="foot-note">BUIDL CTC 2026 Fall. All contracts on testnet.</p>
+</footer>
+
+<span id="copy-status" role="status" aria-live="polite" class="sr-only"></span>
+
+<script>
+(function () {
+  var RESET = 1200;
+  var status = document.getElementById('copy-status');
+
+  function legacyCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { ta.setSelectionRange(0, text.length); } catch (e) {}
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  function settle(btn, ok) {
+    btn.setAttribute('data-state', ok ? 'ok' : 'fail');
+    btn.textContent = ok ? 'copied' : 'copy failed';
+    if (status) { status.textContent = ok ? 'Copied to clipboard' : 'Copy failed'; }
+    window.setTimeout(function () {
+      btn.removeAttribute('data-state');
+      btn.textContent = 'copy';
+    }, RESET);
+  }
+
+  // A scroll wrapper is a keyboard target only while it can actually scroll. The markup
+  // keeps tabindex/role so the no-JS case still works at narrow widths; this removes them
+  // wherever the content fits, so no tab stop is dead and no label claims a scroll it lacks.
+  var wraps = [].slice.call(document.querySelectorAll('.scroll-x[tabindex]')).map(function (el) {
+    return { el: el, label: el.getAttribute('aria-label') || '' };
+  });
+
+  function syncScrollAffordance() {
+    for (var i = 0; i < wraps.length; i++) {
+      var w = wraps[i];
+      if (w.el.scrollWidth > w.el.clientWidth + 1) {
+        w.el.setAttribute('tabindex', '0');
+        w.el.setAttribute('role', 'region');
+        if (w.label) { w.el.setAttribute('aria-label', w.label); }
+      } else {
+        w.el.removeAttribute('tabindex');
+        w.el.removeAttribute('role');
+        w.el.removeAttribute('aria-label');
+      }
+    }
+  }
+
+  syncScrollAffordance();
+  window.addEventListener('load', syncScrollAffordance);
+  var resizeTimer;
+  window.addEventListener('resize', function () {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(syncScrollAffordance, 150);
+  });
+
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    var btn = t && t.closest ? t.closest('.copy-btn[data-copy]') : null;
+    if (!btn) { return; }
+    var src = document.getElementById(btn.getAttribute('data-copy'));
+    if (!src) { settle(btn, false); return; }
+    var text = (src.textContent || '').replace(/\u00a0/g, ' ').replace(/\s+$/, '');
+    if (!text) { settle(btn, false); return; }
+
+    if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(function () {
+        settle(btn, true);
+      }, function () {
+        settle(btn, legacyCopy(text));
+      });
+    } else {
+      settle(btn, legacyCopy(text));
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
