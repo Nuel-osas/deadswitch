@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import Mark from '../Mark';
 import {
   useAccount, useChainId, usePublicClient, useReadContract,
   useSwitchChain, useWalletClient,
@@ -129,10 +130,7 @@ export default function Console() {
       <nav className="nav">
         <div className="wrap nav-in">
           <a className="brand" href="/deadswitch/">
-            <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
-              <rect x="1.5" y="1.5" width="19" height="19" fill="none" stroke="#ff3b41" strokeWidth="1.5" />
-              <path d="M6 11h10M11 6v10" stroke="#ff3b41" strokeWidth="1.5" />
-            </svg>
+            <Mark size={22} />
             Deadswitch
           </a>
           <div className="nav-right">

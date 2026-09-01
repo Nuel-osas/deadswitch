@@ -1,4 +1,5 @@
 import LandingEnhancements from './LandingEnhancements';
+import Mark from './Mark';
 
 export default function Home() {
   return (
@@ -8,7 +9,7 @@ export default function Home() {
       <header className="shell-nav">
         <div className="shell-nav__in">
           <a className="brand" href="#top">
-            <svg className="brand__mark" viewBox="0 0 24 24" width="26" height="26" fill="none" aria-hidden="true" focusable="false"><title>Deadswitch</title><rect x="1.85" y="4.6" width="7.3" height="14.8" rx="1.6" stroke="currentColor" strokeWidth="1.7"/><rect x="14.85" y="4.6" width="7.3" height="14.8" rx="1.6" stroke="currentColor" strokeWidth="1.7"/><path d="M9.15 12h1.75" stroke="currentColor" strokeWidth="1.7" strokeLinecap="butt"/><path d="M13.1 12h1.75" stroke="currentColor" strokeWidth="1.7" strokeLinecap="butt"/></svg>
+            <Mark className="brand__mark" size={26} />
             <span className="brand__type">Dead<b>switch</b></span>
           </a>
 
