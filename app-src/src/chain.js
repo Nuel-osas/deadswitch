@@ -27,7 +27,7 @@ export const CONTRACTS = {
 export const SEPOLIA_RPC = 'https://ethereum-sepolia-rpc.publicnode.com';
 export const PROVER = 'https://prover.cc3-testnet.creditcoin.network';
 export const CHAIN_KEY = 1; // Sepolia's Attestcoin chainKey (not its EVM chainId)
-export const POSITION_ID = 3n;
+export const POSITION_ID = 4n;
 
 export const MANAGER_ABI = [
   {

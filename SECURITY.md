@@ -27,15 +27,19 @@ Reproduce: `yarn exploit <tx> <positionId>` and `yarn attack <suppression|decoy>
 deploy a contract that emits it with a victim's `positionId` and `remaining = 0`. The event is
 genuine and provable; the *vault* is a lie.
 
-`MaliciousVault.forge(101)` does exactly that. The attacker proves it through the oracle like any
+`MaliciousVault.forge(100)` does exactly that. The attacker proves it through the oracle like any
 real event and submits it to two managers:
 
 | Manager | Result |
 |---|---|
-| `NaiveManager` (guards removed) | `PositionLiquidated(#101)` — a healthy position the attacker does not own |
+| `NaiveManager` (guards removed) | `PositionLiquidated(#100)` — a healthy position the attacker does not own |
 | `DeadswitchManager` | reverts `"Event not emitted by registered vault"` |
 
-Forge tx (Sepolia): [`0x4a039a…721f`](https://sepolia.etherscan.io/tx/0x4a039a4d60ecb3322ba00d416cf39e3ee5291e8669d5f67e172b0acd5c46721f)
+Forge tx (Sepolia): [`0x4a039a…721f`](https://sepolia.etherscan.io/tx/0x4a039a4d60ecb3322ba00d416cf39e3ee5291e8669d5f67e172b0acd5c46721f) — forges position #100.
+NaiveManager's liquidation of it (Creditcoin): [`0xcf6de9f8…`](https://creditcoin-testnet.blockscout.com/tx/0xcf6de9f84b744ca44a195cef4f9b53cbe6d5007cad2a8e55e050d880f4b7c09b).
+The same attack was repeated against position #101 with Sepolia forge tx
+[`0x72e20bf6…`](https://sepolia.etherscan.io/tx/0x72e20bf616b56167bd93af57ef37fce2b3955b7e5497defc165301f02bc26ef9)
+and Creditcoin liquidation [`0x93beaff8…`](https://creditcoin-testnet.blockscout.com/tx/0x93beaff8952dd5cd8e9515996d51a387e50cedbe6f5865a712526535dc47b8b2).
 
 This is the executable version of the tutorial's comment. `NaiveManager` is a contract we built by
 *removing* Gluwa's checks — it is a control, not a claim about the tutorial.
@@ -118,9 +122,20 @@ The same `logs[0]` shortcut exists in the tutorial at `USCLoanManager.sol:254-25
    cannot overwrite newer attested state. `USCBase` passes only the queryId, which makes this
    guard impossible to write.
 
-Both findings are filed upstream against `gluwa/usc-testnet-bridge-examples`.
+Both findings are being held for coordinated disclosure to Gluwa; a written report with these
+reproductions is prepared at `ideas/upstream-issue-draft.md` in the working tree. They are
+disclosed here because the affected code is public example code, not a deployed protocol.
 
 ---
+
+## A note on the verified sources
+
+`DeadswitchManager v2` and `NaiveManager` were source-verified on Blockscout before the comment
+below was corrected. Their verified source therefore still carries the older, wrong wording about
+reverted transactions; the bytecode is unaffected (comments do not compile) and Blockscout does
+not permit re-verifying an already-verified address. The corrected comments are in this repository,
+which is the source of truth. We chose not to redeploy, because redeploying would orphan every
+transaction cited as evidence on those addresses.
 
 ## On `receiptStatus`
 

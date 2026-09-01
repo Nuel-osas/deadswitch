@@ -8,8 +8,9 @@ import {USCBase} from "./USCBase.sol";
 /**
  * @title NaiveManager — the WRONG way to build Deadswitch (for the exploit demo)
  * @dev Identical to DeadswitchManager EXCEPT it omits the two security checks:
- *   1. It does NOT check receipt.receiptStatus == 1
- *   2. It does NOT check the event emitter address
+ *   1. It does NOT check receipt.receiptStatus == 1 (not independently exploitable
+ *      on EVM sources — see the note inline)
+ *   2. It does NOT check the event emitter address (this is the demonstrated hole)
  *
  * This is a CONTROL, not a claim about the tutorial: Gluwa's USCLoanManager.sol
  * already implements both guards (lines 240 and 267, PR #92). This contract was
@@ -44,8 +45,12 @@ contract NaiveManager is Ownable, USCBase {
         // ---- NO transaction type validation ----
         EvmV1Decoder.ReceiptFields memory receipt = EvmV1Decoder.decodeReceiptFields(encodedTransaction);
 
-        // ---- BUG 1: no `require(receipt.receiptStatus == 1)` ----
-        // A reverted withdrawal still produces a valid inclusion proof.
+        // ---- omitted: `require(receipt.receiptStatus == 1)` ----
+        // NOTE: this omission is NOT independently exploitable on an EVM source.
+        // Under EIP-658 a reverted transaction's receipt carries no logs, so the
+        // log-presence check below reverts first. The demonstrable hole in this
+        // contract is the missing emitter check further down. Retained here only to
+        // mirror what removing the guards looks like.
 
         EvmV1Decoder.LogEntry[] memory logs =
             EvmV1Decoder.getLogsByEventSignature(receipt, WITHDRAW_EVENT_SIGNATURE);

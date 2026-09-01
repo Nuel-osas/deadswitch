@@ -964,7 +964,7 @@ a.addr:active { color: var(--accent-press); border-bottom-color: var(--accent-pr
       </div>
     </div>
 
-    <p class="hero__note">Below: two structural flaws in the tutorial's <code>USCBase</code>, both reproducible from a clone, and one claim of our own that we retracted after checking it. Ten contracts on public testnets, five verified on Blockscout, four cause-and-effect transactions: <a class="link" href="#evidence">Evidence</a>.</p>
+    <p class="hero__note">Below: two structural flaws in the tutorial's <code>USCBase</code>, both reproducible from a clone, and one claim of our own that we retracted after checking it. Ten contracts on public testnets, four source-verified on Blockscout, four cause-and-effect transactions: <a class="link" href="#evidence">Evidence</a>.</p>
   </section>
 
   <!-- ============ 1. MECHANISM ============ -->
@@ -1261,10 +1261,10 @@ processedQueries[queryId] = true;                     <span class="t-note">// US
         </article>
       </div>
 
-      <p class="verify-line">Verify on Creditcoin: <a href="https://creditcoin-testnet.blockscout.com/tx/0xcf6de9f84b744ca44a195cef4f9b53cbe6d5007cad2a8e55e050d880f4b7c09b"><code>0xcf6de9f8&#8230;</code></a> liquidates position #100 and <a href="https://creditcoin-testnet.blockscout.com/tx/0x93beaff8952dd5cd8e9515996d51a387e50cedbe6f5865a712526535dc47b8b2"><code>0x93beaff8&#8230;</code></a> liquidates #101, both on NaiveManager, both from a forged <code>CollateralWithdrawn</code>. The Sepolia forge below is <code>MaliciousVault.forge(101)</code>.</p>
+      <p class="verify-line">Verify on Creditcoin: <a href="https://creditcoin-testnet.blockscout.com/tx/0xcf6de9f84b744ca44a195cef4f9b53cbe6d5007cad2a8e55e050d880f4b7c09b"><code>0xcf6de9f8&#8230;</code></a> liquidates position #100 and <a href="https://creditcoin-testnet.blockscout.com/tx/0x93beaff8952dd5cd8e9515996d51a387e50cedbe6f5865a712526535dc47b8b2"><code>0x93beaff8&#8230;</code></a> liquidates #101, both on NaiveManager, both from a forged <code>CollateralWithdrawn</code>. The Sepolia forge below is <code>MaliciousVault.forge(100)</code>; the matching forge for #101 is <a class="hash-link" href="https://sepolia.etherscan.io/tx/0x72e20bf616b56167bd93af57ef37fce2b3955b7e5497defc165301f02bc26ef9"><code>0x72e20bf6&#8230;</code></a>.</p>
 
       <div class="repro">
-        <p class="note">Gluwa's loan tutorial already teaches emitter authentication and receipt-status checking: <code>USCLoanManager.sol:240</code> and <code>:267</code>, landed in <a class="link" href="https://github.com/gluwa/usc-testnet-bridge-examples/pull/92">PR #92</a>, commit <a class="link" href="https://github.com/gluwa/usc-testnet-bridge-examples/commit/4ff9a3b">4ff9a3b</a>, 2026-07-29. Deadswitch implements all ten of the tutorial's guards: those two, which the tutorial names explicitly, and its setup steps, including registering the source contract as its own numbered step (<code>loan-flow/README.md</code> &sect;1.5). We are not claiming the tutorial is missing them. What this section adds is the executable proof that the emitter guard is load-bearing.</p>
+        <p class="note">Gluwa's loan tutorial already teaches emitter authentication and receipt-status checking: <code>USCLoanManager.sol:240</code> and <code>:267</code>, landed in <a class="link" href="https://github.com/gluwa/USC-Builder-Examples/pull/92">PR #92</a>, commit <a class="link" href="https://github.com/gluwa/USC-Builder-Examples/commit/4ff9a3b">4ff9a3b</a>, 2026-07-29. Deadswitch implements all ten of the tutorial's guards: those two, which the tutorial names explicitly, and its setup steps, including registering the source contract as its own numbered step (<code>loan-flow/README.md</code> &sect;1.5). We are not claiming the tutorial is missing them. What this section adds is the executable proof that the emitter guard is load-bearing.</p>
         <p class="note">The contract that holds here is DeadswitchManager v2 at <code>0x70FD&#8230;3BD4</code>, which is what <code>yarn exploit</code> submits to; the string comes from <code>DeadswitchManager.sol:128</code>. v3 rejects the same proof by a different route: it skips the foreign log rather than reverting on it, so nothing is left to apply and it reverts <code>"No vault collateral events in transaction"</code> (<code>DeadswitchManagerV3.sol:123</code>). Either way the position survives, and the emitter check is enforced as a skip rather than a revert. Finding B is why.</p>
         <p class="note">NaiveManager is a control we built by removing the checks. It is not a claim about anyone's code.</p>
         <div class="repro__row">
@@ -1449,7 +1449,7 @@ processedQueries[queryId] = true;                     <span class="t-note">// US
         </li>
       </ol>
 
-      <p class="ledger-note">Both findings are written up in full in <a class="link" href="https://github.com/Nuel-osas/deadswitch/blob/main/SECURITY.md"><code>SECURITY.md</code></a>, with the file and line references on both sides. They are prepared for upstream disclosure to <code>gluwa/usc-testnet-bridge-examples</code> and held for coordinated disclosure rather than filed as a public issue while judging is open.</p>
+      <p class="ledger-note">Both findings are written up in full in <a class="link" href="https://github.com/Nuel-osas/deadswitch/blob/main/SECURITY.md"><code>SECURITY.md</code></a>, with the file and line references on both sides. They are prepared for upstream disclosure to <code>gluwa/USC-Builder-Examples</code> and held for coordinated disclosure rather than filed as a public issue while judging is open.</p>
     </div>
   </section>
 
@@ -1551,7 +1551,7 @@ processedQueries[queryId] = true;                     <span class="t-note">// US
                 <td class="c-chain">Creditcoin CC3</td>
                 <td class="c-addr">
                   <a class="addr" href="https://creditcoin-testnet.blockscout.com/address/0xe12EEc4cD89F695A709e27E8ceb01b213fcd9a0c" id="a5">0xe12EEc4cD89F695A709e27E8ceb01b213fcd9a0c</a>
-                  <span class="verified"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false"><path d="M8 1.6 13.4 4v4c0 2.9-2.1 5.4-5.4 6.4C4.7 13.4 2.6 10.9 2.6 8V4L8 1.6Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="m5.8 8 1.6 1.7 3-3.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Verified on Blockscout</span>
+                  
                 </td>
                 <td class="c-why">Carries the first live liquidations. Same address as TestERC20 above, on a different chain: same deployer, same nonce.</td>
                 <td class="c-act"><button class="copy" data-copy="a5" aria-label="Copy DeadswitchManager v1 address">Copy</button></td>
@@ -1600,7 +1600,7 @@ processedQueries[queryId] = true;                     <span class="t-note">// US
           </table>
         </div>
       </div>
-      <p class="ledger-note">All addresses and transactions are testnet: Sepolia and Creditcoin CC3. The five CC3 contracts are source-verified on Blockscout, so every event on this page decodes publicly. The three adversarial contracts are not source-verified on Etherscan; their Solidity is linked in the rows above, and everything they emit is a public event signature you can reproduce from a clone.</p>
+      <p class="ledger-note">All addresses and transactions are testnet: Sepolia and Creditcoin CC3. Four of the five CC3 contracts are source-verified on Blockscout, so every event on this page decodes publicly. v1 is not: its bytecode predates the deposit path later added to <code>DeadswitchManager.sol</code>, so the current source no longer matches it, and we would rather leave it unverified than ship a mismatched source. The three adversarial contracts are not source-verified on Etherscan; their Solidity is linked in the rows above, and everything they emit is a public event signature you can reproduce from a clone.</p>
 
       <h3 id="transactions" class="sub-head sub-head--gap">Transactions</h3>
       <p class="ledger-note flush">Each hash below is the Sepolia cause. The Creditcoin effect it produces is named beside it, and every one of them is reproducible from a clone with the commands in <a class="link" href="#run-it">Run it</a>.</p>

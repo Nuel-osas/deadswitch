@@ -106,7 +106,10 @@ Superseded, kept so the security demos stay reproducible:
 | DeadswitchManager v2 | Creditcoin CC3 | `0x70FD9432620accb22E015E3929FF948B41aa3BD4` | inherits the tutorial's `USCBase`; the contract the attack demos defeat |
 | DeadswitchManager v1 | Creditcoin CC3 | `0xe12EEc4cD89F695A709e27E8ceb01b213fcd9a0c` | carries the first two live liquidations |
 
-All CC3 contracts are **verified on Blockscout**, so every event below decodes publicly.
+The four current CC3 contracts (v3, v2, NaiveManager, EvmV1Decoder) are **source-verified on
+Blockscout**, so every event below decodes publicly. v1 is left unverified deliberately: its
+bytecode predates the deposit path later added to `DeadswitchManager.sol`, so the current source
+no longer matches it.
 
 Headline proof — position #3, liquidated autonomously by the permissionless keeper on the current
 v3 contract: 60 TST withdrawn on Sepolia, 40 TST attested against a 50 TST threshold.

@@ -111,9 +111,13 @@ contract DeadswitchManager is Ownable, ReentrancyGuard, USCBase {
         uint8 txType = EvmV1Decoder.getTransactionType(encodedTransaction);
         require(EvmV1Decoder.isValidTransactionType(txType), "Unsupported transaction type");
 
-        // The precompile proves inclusion, NOT success: a reverted source-chain
-        // transaction still has a valid inclusion proof. Without this check, a
-        // failed withdrawal could liquidate a healthy position.
+        // The precompile proves inclusion, not success. On EVM sources this check is
+        // a redundant-but-explicit invariant: under EIP-658 a reverted transaction's
+        // receipt carries no logs at all, so the log-presence check below already
+        // subsumes it. It is kept for non-EVM sources and decoder changes where that
+        // guarantee does not hold. (An earlier draft of this project claimed a
+        // reverted transaction could carry a CollateralWithdrawn log; that was wrong
+        // and is retracted — see SECURITY.md.)
         EvmV1Decoder.ReceiptFields memory receipt = EvmV1Decoder.decodeReceiptFields(encodedTransaction);
         require(receipt.receiptStatus == 1, "Source transaction did not succeed");
 

@@ -4,8 +4,11 @@ import { chainInfo, proofProvider } from '@gluwa/usc-sdk';
 
 import v2Abi from '../abi/DeadswitchManager.json';
 import v3Abi from '../abi/DeadswitchManagerV3.json';
+import { CORE, requireEnv } from './env';
 
 dotenv.config({ override: true });
+
+requireEnv([...CORE, 'DEADSWITCH_MANAGER_ADDRESS', 'DEADSWITCH_MANAGER_V3_ADDRESS', 'COLLATERAL_VAULT_ADDRESS']);
 
 /**
  * Demonstrates the two structural flaws in the tutorial's USCBase pattern, live.

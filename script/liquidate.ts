@@ -2,14 +2,17 @@ import dotenv from 'dotenv';
 import { Contract, ethers, InterfaceAbi } from 'ethers';
 import { chainInfo, proofProvider } from '@gluwa/usc-sdk';
 
-import managerAbi from '../abi/DeadswitchManager.json';
+import managerAbi from '../abi/DeadswitchManagerV3.json';
+import { CORE, requireEnv } from './env';
 
 dotenv.config({ override: true });
+
+requireEnv([...CORE, 'DEADSWITCH_MANAGER_V3_ADDRESS']);
 
 // Deadswitch liquidation submitter (CLI).
 // Usage: yarn liquidate <withdrawal_tx_hash>
 // Proves a CollateralWithdrawn event from the Sepolia vault via the Attestcoin
-// oracle and submits it to DeadswitchManager.execute (action 0). Permissionless:
+// oracle and submits it to DeadswitchManagerV3.execute(). Permissionless:
 // any observer can run this — trust comes from the attestation quorum.
 async function main() {
   const [txHash] = process.argv.slice(2);
@@ -39,11 +42,12 @@ async function main() {
   const p = r.data!;
 
   const wallet = new ethers.Wallet(process.env.CREDITCOIN_WALLET_PRIVATE_KEY!, ccProvider);
-  const manager = new Contract(process.env.DEADSWITCH_MANAGER_ADDRESS!, managerAbi as InterfaceAbi, wallet);
+  const manager = new Contract(process.env.DEADSWITCH_MANAGER_V3_ADDRESS!, managerAbi as InterfaceAbi, wallet);
 
-  console.log('Submitting proof to DeadswitchManager.execute (action=CollateralWithdrawn)…');
+  console.log('Submitting proof to DeadswitchManagerV3.execute()…');
+  // v3 derives the action from the logs themselves — no caller-supplied selector.
   const tx = await manager.execute(
-    0, p.chainKey, p.headerNumber, p.txBytes,
+    p.chainKey, p.headerNumber, p.txBytes,
     p.merkleProof.root, p.merkleProof.siblings,
     p.continuityProof.lowerEndpointDigest, p.continuityProof.roots,
     { gasLimit: 2_000_000 }
