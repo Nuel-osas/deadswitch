@@ -119,6 +119,22 @@ v3 contract: 60 TST withdrawn on Sepolia, 40 TST attested against a 50 TST thres
 Earlier proven kill: withdrawal [`0x8758…4b10`](https://sepolia.etherscan.io/tx/0x87585c3b4d832d8519220cfe8da89a924500da931537bbff04e01c7b20784b10)
 (100 → 40 TST, threshold 50) → proof submitted → `PositionLiquidated(1, 40e18, 50e18)`.
 
+## Frontend
+
+Two routes, one Next.js 15 app (App Router, static export):
+
+| Route | What it is |
+|---|---|
+| `/` | Overview: mechanism, findings, evidence ledger |
+| `/app` | Live console — reads Creditcoin CC3 and Sepolia directly, connects a wallet via RainbowKit, and submits Attestcoin proofs |
+
+```sh
+cd web-next && npm install && npm run build   # -> web-next/out, mirrored into docs/ for GitHub Pages
+```
+
+Live at https://nuel-osas.github.io/deadswitch/ — no backend, no indexer. The console talks to the
+public RPCs and the Attestcoin prover from the browser.
+
 ## Run it
 
 ```sh
