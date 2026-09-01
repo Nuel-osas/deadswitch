@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deadswitch — live console</title>
+<meta name="description" content="Live Deadswitch state on Creditcoin CC3 and Ethereum Sepolia. Submit an Attestcoin proof yourself and liquidate a position — proof submission is permissionless.">
+<style>
+:root{
+  color-scheme: dark;
+  --ground:#09090b; --ground-sub:#0c0c0f; --panel:#101014; --panel-hi:#16161b; --well:#060608;
+  --line-subtle:#17171c; --line:#232329; --line-strong:#33333c; --edge:#4a4a55; --border-interactive:#626270;
+  --text-1:#ededf1; --text-2:#a6a6b2; --text-3:#8c8c99;
+  --accent:#ff3b41; --accent-hi:#ff5a5f; --accent-press:#e63b41; --on-accent:#0a0507;
+  --accent-wash:#1a0d0f; --accent-edge:rgba(255,59,65,.34); --accent-line:rgba(255,59,65,.16);
+  --ok:#34d399; --ok-wash:#08170f; --ok-edge:rgba(52,211,153,.30);
+  --warn:#f5a524; --warn-wash:#1a1206; --warn-edge:rgba(245,165,36,.30);
+  --shadow-1:0 1px 0 rgba(255,255,255,.02), 0 8px 24px -16px rgba(0,0,0,.9);
+  --nav-h:60px; --maxw:1180px; --gutter:clamp(16px,4vw,32px);
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px; --s8:64px;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Inter,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--ground);scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto} *{animation:none!important;transition:none!important}}
+body{background:var(--ground);color:var(--text-2);font:15px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+h1,h2,h3{color:var(--text-1);font-weight:600;letter-spacing:-.02em;line-height:1.2}
+code,.mono{font-family:var(--mono);font-variant-numeric:tabular-nums slashed-zero}
+a{color:var(--text-1);text-decoration:none}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent-hi);outline-offset:2px}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 var(--gutter)}
+
+/* nav */
+.nav{position:sticky;top:0;z-index:20;height:var(--nav-h);background:rgba(9,9,11,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--line-subtle)}
+@supports not (backdrop-filter:blur(1px)){.nav{background:var(--ground)}}
+.nav-in{display:flex;align-items:center;gap:var(--s5);height:100%}
+.brand{display:flex;align-items:center;gap:var(--s3);font-weight:650;color:var(--text-1);letter-spacing:-.01em}
+.brand svg{display:block}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:var(--s3)}
+.btn{display:inline-flex;align-items:center;gap:var(--s2);height:36px;padding:0 var(--s4);border:1px solid var(--border-interactive);background:transparent;color:var(--text-1);font:500 13px var(--sans);cursor:pointer;transition:background .12s,border-color .12s,transform .08s}
+.btn:hover{background:var(--panel-hi);border-color:var(--edge)}
+.btn:active{transform:translateY(1px)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn--accent{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.btn--accent:hover{background:var(--accent-hi);border-color:var(--accent-hi)}
+.btn--accent:active{background:var(--accent-press)}
+.chip{display:inline-flex;align-items:center;gap:var(--s2);height:26px;padding:0 10px;border:1px solid var(--line);background:var(--panel);font:500 11.5px var(--mono);color:var(--text-3);letter-spacing:.04em;text-transform:uppercase}
+.chip .dot{width:6px;height:6px;border-radius:50%;background:var(--text-3)}
+.chip.is-live{color:var(--ok);border-color:var(--ok-edge);background:var(--ok-wash)} .chip.is-live .dot{background:var(--ok)}
+.chip.is-err{color:var(--accent);border-color:var(--accent-edge);background:var(--accent-wash)} .chip.is-err .dot{background:var(--accent)}
+
+/* head */
+.head{padding:var(--s8) 0 var(--s6);border-bottom:1px solid var(--line-subtle)}
+.head h1{font-size:clamp(26px,4vw,38px)}
+.head p{margin-top:var(--s3);max-width:66ch;color:var(--text-2)}
+.head .back{display:inline-block;margin-bottom:var(--s4);font:500 13px var(--sans);color:var(--text-3);border-bottom:1px solid transparent}
+.head .back:hover{color:var(--text-1);border-bottom-color:var(--line-strong)}
+
+/* layout */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:var(--s5);padding:var(--s7) 0}
+@media (max-width:900px){.cols{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow-1);min-width:0}
+.card__head{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);padding:var(--s4) var(--s5);border-bottom:1px solid var(--line-subtle);background:var(--panel-hi)}
+.card__head h2{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
+.card__body{padding:var(--s5)}
+.metric{font:600 34px/1.05 var(--sans);color:var(--text-1);font-variant-numeric:tabular-nums slashed-zero;letter-spacing:-.03em;margin:var(--s2) 0 var(--s5)}
+.metric .u{font-size:15px;color:var(--text-3);font-weight:500;margin-left:6px}
+.metric.dead{color:var(--accent)} .metric.ok{color:var(--ok)}
+.lbl{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--text-3)}
+dl.rows{border-top:1px solid var(--line-subtle)}
+.row{display:flex;justify-content:space-between;gap:var(--s4);padding:9px 0;border-bottom:1px solid var(--line-subtle);font-size:13.5px}
+.row dt{color:var(--text-3)} .row dd{color:var(--text-1);font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.row dd.danger{color:var(--accent)}
+.addr{font-family:var(--mono);font-size:11.5px;color:var(--text-3);word-break:break-all;margin-top:var(--s4);padding-top:var(--s3);border-top:1px solid var(--line-subtle)}
+.addr a{color:var(--text-3);border-bottom:1px solid var(--line)}
+.addr a:hover{color:var(--accent)}
+
+/* keeper */
+.keeper{padding:0 0 var(--s8)}
+.keeper .card__body{padding:var(--s5)}
+.field{display:flex;gap:var(--s3);margin:var(--s4) 0}
+@media (max-width:640px){.field{flex-direction:column}}
+input[type=text]{flex:1;min-width:0;height:38px;padding:0 var(--s3);background:var(--well);border:1px solid var(--line-strong);color:var(--text-1);font:13px var(--mono)}
+input[type=text]::placeholder{color:var(--text-3)}
+input[type=text]:focus{border-color:var(--border-interactive);outline:none}
+.hint{font-size:13px;color:var(--text-3);line-height:1.6}
+.hint code{font-size:12px;color:var(--text-2)}
+.log{margin-top:var(--s4);background:var(--well);border:1px solid var(--line);padding:var(--s4);font:12.5px/1.7 var(--mono);max-height:280px;overflow-y:auto}
+.log div{padding:1px 0;display:flex;gap:10px}
+.log .t{color:var(--text-3);flex:none}
+.k-info{color:var(--text-2)} .k-step{color:var(--text-1)} .k-ok{color:var(--ok)}
+.k-err{color:var(--accent)} .k-kill{color:var(--accent);font-weight:600}
+.presets{display:flex;flex-wrap:wrap;gap:var(--s2);margin-top:var(--s3)}
+.preset{font:11.5px var(--mono);padding:5px 9px;border:1px solid var(--line);background:var(--panel-hi);color:var(--text-3);cursor:pointer}
+.preset:hover{color:var(--text-1);border-color:var(--border-interactive)}
+.note{font-size:13px;color:var(--text-3);margin-top:var(--s4);padding-top:var(--s4);border-top:1px solid var(--line-subtle);line-height:1.65}
+footer{border-top:1px solid var(--line-subtle);padding:var(--s6) 0;font-size:13px;color:var(--text-3)}
+footer a{color:var(--text-2);border-bottom:1px solid var(--line)}
+footer a:hover{color:var(--text-1)}
+.skip{position:absolute;left:-9999px}
+.skip:focus{left:var(--gutter);top:8px;z-index:50;background:var(--panel);padding:8px 12px;border:1px solid var(--accent)}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<nav class="nav"><div class="wrap nav-in">
+  <a class="brand" href="../">
+    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1.5" y="1.5" width="19" height="19" fill="none" stroke="#ff3b41" stroke-width="1.5"/><path d="M6 11h10M11 6v10" stroke="#ff3b41" stroke-width="1.5"/></svg>
+    Deadswitch
+  </a>
+  <div class="nav-right">
+    <span class="chip" id="netchip"><span class="dot"></span><span id="netlabel">connecting</span></span>
+    <button class="btn" id="connect">Connect wallet</button>
+  </div>
+</div></nav>
+
+<main id="main">
+<div class="wrap head">
+  <a class="back" href="../">&larr; Back to overview</a>
+  <h1>Live console</h1>
+  <p>Live state read straight from Creditcoin CC3 and Ethereum Sepolia. No backend — this page talks to the public RPCs and the Attestcoin prover directly. Proof submission is permissionless, so you can liquidate a position yourself with your own wallet.</p>
+</div>
+
+<div class="wrap cols">
+  <section class="card" aria-labelledby="vaultH">
+    <div class="card__head"><h2 id="vaultH">Collateral vault</h2><span class="chip">Sepolia</span></div>
+    <div class="card__body">
+      <span class="lbl">Collateral remaining</span>
+      <div class="metric" id="vaultBal">&mdash;</div>
+      <dl class="rows">
+        <div class="row"><dt>Position</dt><dd id="posId">#3</dd></div>
+        <div class="row"><dt>Owner</dt><dd id="vaultOwner">&mdash;</dd></div>
+        <div class="row"><dt>Withdrawals</dt><dd>never blocked, always logged</dd></div>
+      </dl>
+      <p class="addr">Vault <a id="vaultLink" href="https://sepolia.etherscan.io/address/0x80366d27b907828A36243140ce6ACED6350EE412">0x80366d27b907828A36243140ce6ACED6350EE412</a></p>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="posH">
+    <div class="card__head"><h2 id="posH">Debt position</h2><span class="chip">Creditcoin CC3</span></div>
+    <div class="card__body">
+      <span class="lbl">Position status</span>
+      <div class="metric" id="posStatus">&mdash;</div>
+      <dl class="rows">
+        <div class="row"><dt>Debt</dt><dd id="posDebt">&mdash;</dd></div>
+        <div class="row"><dt>Liquidation threshold</dt><dd id="posMin">&mdash;</dd></div>
+        <div class="row"><dt>Last attested collateral</dt><dd id="posAtt">&mdash;</dd></div>
+        <div class="row"><dt>Last attested block</dt><dd id="posBlk">&mdash;</dd></div>
+      </dl>
+      <p class="addr">Manager v3 <a id="mgrLink" href="https://creditcoin-testnet.blockscout.com/address/0x44e2d55Af74f400b97fBC010Acd504A1458bA682">0x44e2d55Af74f400b97fBC010Acd504A1458bA682</a> &middot; verified</p>
+    </div>
+  </section>
+</div>
+
+<div class="wrap keeper">
+  <section class="card" aria-labelledby="keepH">
+    <div class="card__head"><h2 id="keepH">Be the keeper</h2><span class="chip" id="attChip"><span class="dot"></span><span id="attLabel">attested height &mdash;</span></span></div>
+    <div class="card__body">
+      <p class="hint">Anyone can prove a Sepolia event to Creditcoin — there is no privileged relayer. Paste a <code>CollateralWithdrawn</code> transaction hash from the vault, and this page will fetch its inclusion and continuity proof from the Attestcoin prover and submit it to <code>DeadswitchManagerV3.execute()</code> with your wallet. If the attested collateral is below the threshold, the position liquidates in the same transaction that verifies the proof.</p>
+      <div class="field">
+        <input type="text" id="txhash" placeholder="0x… Sepolia CollateralWithdrawn transaction" spellcheck="false" aria-label="Sepolia transaction hash">
+        <button class="btn btn--accent" id="submit">Fetch proof &amp; submit</button>
+      </div>
+      <div class="presets" id="presets" aria-label="Example transactions"></div>
+      <div class="log" id="log" role="log" aria-live="polite"><div><span class="t">&mdash;</span><span class="k-info">Idle. Reading live state…</span></div></div>
+      <p class="note">A transaction can only be proven once — <code>processedQueries</code> rejects replays with <code>Query already processed</code>. The examples below are already consumed; they will revert, which is itself the correct behaviour to observe. To liquidate something live, use a fresh withdrawal from the vault.</p>
+    </div>
+  </section>
+</div>
+</main>
+
+<footer><div class="wrap">
+  Deadswitch — testnet only, nothing here holds real value.
+  <a href="../">Overview</a> &middot;
+  <a href="https://github.com/Nuel-osas/deadswitch">GitHub</a> &middot;
+  <a href="https://creditcoin-testnet.blockscout.com/address/0x44e2d55Af74f400b97fBC010Acd504A1458bA682">Manager on Blockscout</a>
+</div></footer>
+
+<script src="./ethers.umd.min.js"></script>
+<script>
+(function(){
+"use strict";
+var E = window.ethers;
+var CC3_RPC='https://rpc.cc3-testnet.creditcoin.network';
+var SEP_RPC='https://ethereum-sepolia-rpc.publicnode.com';
+var PROVER='https://prover.cc3-testnet.creditcoin.network';
+var CHAIN_KEY=1, CC3_ID=102031, CC3_HEX='0x18e8f';
+var MGR='0x44e2d55Af74f400b97fBC010Acd504A1458bA682';
+var VAULT='0x80366d27b907828A36243140ce6ACED6350EE412';
+var POS=3;
+
+var MGR_ABI=[
+ 'function debtPositions(uint256) view returns (address borrower,uint256 debt,uint256 minCollateral,uint256 lastAttestedCollateral,uint64 lastAttestedBlock,uint8 status,bool exists)',
+ 'function execute(uint64 chainKey,uint64 blockHeight,bytes encodedTransaction,bytes32 merkleRoot,tuple(bytes32 hash,bool isLeft)[] siblings,bytes32 lowerEndpointDigest,bytes32[] continuityRoots) returns (bool)',
+ 'event PositionLiquidated(uint256 indexed positionId,uint256 remainingCollateral,uint256 minCollateral)',
+ 'event CollateralAttested(uint256 indexed positionId,uint256 remaining,uint64 blockHeight)',
+ 'event PositionRestored(uint256 indexed positionId,uint256 remainingCollateral,uint256 minCollateral)'
+];
+var VAULT_ABI=['function positions(uint256) view returns (address owner,address token,uint256 balance,bool exists)'];
+
+var $=function(id){return document.getElementById(id)};
+function log(msg,kind){
+  var d=document.createElement('div');
+  d.innerHTML='<span class="t">'+new Date().toLocaleTimeString()+'</span><span class="k-'+(kind||'info')+'"></span>';
+  d.lastChild.textContent=msg;
+  var L=$('log'); L.appendChild(d); L.scrollTop=L.scrollHeight;
+}
+function fmt(v){ try{ return Number(E.formatEther(v)).toLocaleString(undefined,{maximumFractionDigits:4}); }catch(e){ return String(v); } }
+function short(a){ return a? a.slice(0,8)+'…'+a.slice(-6):'—'; }
+
+var ccRead=new E.JsonRpcProvider(CC3_RPC,undefined,{staticNetwork:true});
+var sepRead=new E.JsonRpcProvider(SEP_RPC,undefined,{staticNetwork:true});
+var mgrRead=new E.Contract(MGR,MGR_ABI,ccRead);
+var vaultRead=new E.Contract(VAULT,VAULT_ABI,sepRead);
+
+var STATUS=['Active','Liquidated','Closed'];
+
+function refresh(){
+  Promise.all([
+    vaultRead.positions(POS).catch(function(){return null}),
+    mgrRead.debtPositions(POS).catch(function(){return null}),
+    fetch(PROVER+'/api/v1/attested-height/'+CHAIN_KEY).then(function(r){return r.json()}).catch(function(){return null})
+  ]).then(function(res){
+    var v=res[0], p=res[1], a=res[2];
+    if(v){ $('vaultBal').innerHTML=fmt(v.balance)+'<span class="u">TST</span>'; $('vaultOwner').textContent=short(v.owner); }
+    if(p){
+      var st=Number(p.status);
+      var el=$('posStatus'); el.textContent=STATUS[st]||'Unknown';
+      el.className='metric '+(st===1?'dead':st===0?'ok':'');
+      $('posDebt').textContent=fmt(p.debt)+' TST';
+      $('posMin').textContent=fmt(p.minCollateral)+' TST';
+      var att=$('posAtt'); att.textContent=p.lastAttestedCollateral===0n?'never attested':fmt(p.lastAttestedCollateral)+' TST';
+      att.className=(p.lastAttestedCollateral!==0n && p.lastAttestedCollateral<p.minCollateral)?'danger':'';
+      $('posBlk').textContent=p.lastAttestedBlock===0n?'—':String(p.lastAttestedBlock);
+    }
+    if(a&&a.attestedHeight){ $('attLabel').textContent='attested height '+a.attestedHeight; }
+    $('netchip').className='chip is-live'; $('netlabel').textContent='live';
+  }).catch(function(e){
+    $('netchip').className='chip is-err'; $('netlabel').textContent='rpc error';
+  });
+}
+
+// ---- wallet ----
+var signer=null;
+$('connect').addEventListener('click',function(){
+  if(!window.ethereum){ log('No injected wallet found. Install MetaMask or any EIP-1193 wallet.','err'); return; }
+  window.ethereum.request({method:'eth_requestAccounts'}).then(function(accs){
+    return window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:CC3_HEX}]})
+      .catch(function(err){
+        if(err && (err.code===4902||err.code===-32603)){
+          return window.ethereum.request({method:'wallet_addEthereumChain',params:[{
+            chainId:CC3_HEX,chainName:'Creditcoin CC3 Testnet',
+            nativeCurrency:{name:'Creditcoin',symbol:'CTC',decimals:18},
+            rpcUrls:[CC3_RPC],blockExplorerUrls:['https://creditcoin-testnet.blockscout.com']
+          }]});
+        }
+        throw err;
+      }).then(function(){return accs});
+  }).then(function(accs){
+    var bp=new E.BrowserProvider(window.ethereum);
+    return bp.getSigner().then(function(s){
+      signer=s;
+      $('connect').textContent=short(accs[0]);
+      log('Wallet connected on Creditcoin CC3: '+accs[0],'ok');
+    });
+  }).catch(function(e){ log('Connect failed: '+(e.message||e),'err'); });
+});
+
+// ---- keeper submit ----
+$('submit').addEventListener('click',function(){
+  var tx=$('txhash').value.trim();
+  if(!/^0x[0-9a-fA-F]{64}$/.test(tx)){ log('Enter a valid 32-byte transaction hash.','err'); return; }
+  var btn=$('submit'); btn.disabled=true; btn.textContent='Working…';
+  log('Fetching proof for '+tx.slice(0,12)+'… from the Attestcoin prover','step');
+  fetch(PROVER+'/api/v1/proof-by-tx/'+CHAIN_KEY+'/'+tx).then(function(r){
+    if(!r.ok) throw new Error('prover returned '+r.status+' (block may not be attested yet — attestation takes ~8-10 min)');
+    return r.json();
+  }).then(function(p){
+    log('Proof received. Sepolia block '+p.headerNumber+', '+p.merkleProof.siblings.length+' merkle siblings, '+p.continuityProof.roots.length+' continuity roots.','ok');
+    if(!signer){ throw new Error('Connect a wallet to submit the proof.'); }
+    var c=new E.Contract(MGR,MGR_ABI,signer);
+    var sib=p.merkleProof.siblings.map(function(s){return [s.hash,s.isLeft]});
+    log('Submitting to DeadswitchManagerV3.execute() — the 0x0FD2 precompile verifies it in this same transaction','step');
+    return c.execute(p.chainKey,p.headerNumber,p.txBytes,p.merkleProof.root,sib,p.continuityProof.lowerEndpointDigest,p.continuityProof.roots,{gasLimit:3000000})
+      .then(function(t){ log('Sent: '+t.hash,'step'); return t.wait(); })
+      .then(function(rec){
+        var found=false;
+        rec.logs.forEach(function(l){
+          try{ var parsed=c.interface.parseLog(l); if(!parsed) return;
+            if(parsed.name==='PositionLiquidated'){ found=true; log('PositionLiquidated(#'+parsed.args[0]+'): '+fmt(parsed.args[1])+' < '+fmt(parsed.args[2]),'kill'); }
+            else if(parsed.name==='CollateralAttested'){ log('CollateralAttested(#'+parsed.args[0]+'): remaining '+fmt(parsed.args[1]),'ok'); }
+            else if(parsed.name==='PositionRestored'){ found=true; log('PositionRestored(#'+parsed.args[0]+'): '+fmt(parsed.args[1])+' >= '+fmt(parsed.args[2]),'ok'); }
+          }catch(e){}
+        });
+        log('Mined. https://creditcoin-testnet.blockscout.com/tx/'+rec.hash,'ok');
+        if(!found) log('No position state changed — the proven transaction touched no registered position.','info');
+        refresh();
+      });
+  }).catch(function(e){
+    var m=(e&&(e.reason||e.shortMessage||e.message))||String(e);
+    log('Failed: '+m,'err');
+    if(/already processed/i.test(m)) log('That is the replay guard working: one source transaction can be proven exactly once.','info');
+  }).then(function(){ btn.disabled=false; btn.textContent='Fetch proof & submit'; });
+});
+
+// example hashes
+var EX=[
+  ['Finding A source tx','0x979a5719fce321311fc67388f09110831ebda6fb53d9ab244e45de54cedfffd3'],
+  ['Finding B source tx','0x6f88a998739bb6a9f11d252d4a35ce4f327cfc8567af3731c4eabf354b31bfa3'],
+  ['Position #3 withdrawal','0x6b17a76246f2623f34920d6ee628ca5e7a453527ef0ca359f89212f5555257ae']
+];
+EX.forEach(function(e){
+  var b=document.createElement('button'); b.className='preset'; b.type='button'; b.textContent=e[0];
+  b.addEventListener('click',function(){ $('txhash').value=e[1]; log('Loaded '+e[0],'info'); });
+  $('presets').appendChild(b);
+});
+
+refresh(); setInterval(refresh,15000);
+})();
+</script>
+</body>
+</html>

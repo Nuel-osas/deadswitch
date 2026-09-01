@@ -898,7 +898,7 @@ a.addr:active { color: var(--accent-press); border-bottom-color: var(--accent-pr
 
     <div class="shell-nav__actions">
       <span class="chip chip--live"><span class="chip__dot"></span>v3 deployed on CC3</span>
-      <a class="btn btn--primary btn--sm" href="index.html">Open the console</a>
+      <a class="btn btn--primary btn--sm" href="app/">Launch app</a>
       <details class="nav-menu">
         <summary aria-label="Sections"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" aria-hidden="true" focusable="false"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></summary>
         <div class="nav-menu__panel">
@@ -907,6 +907,7 @@ a.addr:active { color: var(--accent-press); border-bottom-color: var(--accent-pr
           <a href="#evidence">Evidence</a>
           <a href="#retraction">Retraction</a>
           <a href="#run-it">Run it</a>
+          <a href="app/">Launch app</a>
           <a href="https://github.com/Nuel-osas/deadswitch">Open the repo</a>
         </div>
       </details>
@@ -923,7 +924,7 @@ a.addr:active { color: var(--accent-press); border-bottom-color: var(--accent-pr
     <p class="hero__note">Provable 8 to 10 minutes after inclusion, once the Sepolia block can no longer be reorged: the finality guarantee, not lag. Liquidation is a state transition and nothing settles, by design: no seizure, no transfer, no auction.</p>
 
     <div class="hero__cta">
-      <a class="btn btn--primary" href="index.html">Open the console</a>
+      <a class="btn btn--primary" href="app/">Open the console</a>
       <a class="btn btn--secondary" href="#finding-a">Read the findings</a>
       <a class="btn btn--secondary" href="https://github.com/Nuel-osas/deadswitch">Open the repo</a>
     </div>
@@ -1720,7 +1721,8 @@ processedQueries[queryId] = true;                     <span class="t-note">// US
 yarn server</pre></div>
             </div>
             <p class="note">Add a testnet key to <code>.env</code>. Console UI and the permissionless keeper come up on <code>http://127.0.0.1:4020</code>. Withdraw on the Sepolia pane, watch the position die on the Creditcoin pane, with the attestation progress between them.</p>
-            <div><a class="btn btn--secondary btn--sm" href="index.html">Open the console</a></div>
+        <p class="note">Prefer not to clone? The <a class="link" href="app/">hosted console</a> reads the same live state straight from the public RPCs, and lets you submit an Attestcoin proof yourself with a wallet — proof submission is permissionless.</p>
+            <div><a class="btn btn--secondary btn--sm" href="app/">Open the console</a></div>
           </div>
         </article>
 
@@ -1778,7 +1780,7 @@ yarn server</pre></div>
         <li><a href="#retraction">Retraction</a></li>
         <li><a href="#scope">Scope</a></li>
         <li><a href="#run-it">Run it</a></li>
-        <li><a href="index.html">Console</a></li>
+        <li><a href="app/">Console</a></li>
         <li><a href="https://github.com/Nuel-osas/deadswitch">Repo</a></li>
         <li><a href="https://github.com/Nuel-osas/deadswitch/blob/main/SECURITY.md">SECURITY.md</a></li>
         <li><a href="https://creditcoin-testnet.blockscout.com/">Creditcoin Blockscout</a></li>
