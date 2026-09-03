@@ -63,7 +63,7 @@ of trusted from the caller; every log from the registered vault is applied in or
 are skipped rather than reverted on; `blockHeight` is threaded through so stale proofs cannot
 overwrite newer state. Both attacks were re-run against v3 and both positions liquidated correctly.
 
-Both findings are being held for coordinated disclosure to Gluwa, with a written report prepared.
+Both findings are filed upstream at https://github.com/gluwa/USC-Builder-Examples/issues/37.
 `yarn attack` reproduces either one against both managers.
 
 Third defense: the ~10-minute attestation wait is finality protection — Deadswitch never

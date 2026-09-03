@@ -122,9 +122,9 @@ The same `logs[0]` shortcut exists in the tutorial at `USCLoanManager.sol:254-25
    cannot overwrite newer attested state. `USCBase` passes only the queryId, which makes this
    guard impossible to write.
 
-Both findings are being held for coordinated disclosure to Gluwa; a written report with these
-reproductions is prepared at `ideas/upstream-issue-draft.md` in the working tree. They are
-disclosed here because the affected code is public example code, not a deployed protocol.
+Both findings are **filed upstream**: https://github.com/gluwa/USC-Builder-Examples/issues/37 (2026-09-03).
+They are disclosed publicly because the affected code is public example code, not a deployed
+protocol with funds at risk.
 
 ---
 
