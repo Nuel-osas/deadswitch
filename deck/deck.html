@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Deadswitch — BUIDL CTC 2026</title>
+<style>
+@page { size: 1280px 720px; margin: 0; }
+html,body{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+:root{
+  --ground:#09090b; --panel:#101014; --panel-hi:#16161b; --well:#060608;
+  --line:#232329; --line-strong:#33333c;
+  --t1:#ededf1; --t2:#a6a6b2; --t3:#8c8c99;
+  --accent:#ff3b41; --ok:#34d399;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#000;font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.slide{
+  width:1280px;height:720px;background:var(--ground);color:var(--t2);
+  padding:72px 88px;position:relative;overflow:hidden;
+  break-after:page;page-break-after:always;break-inside:avoid;page-break-inside:avoid;
+  display:flex;flex-direction:column;
+}
+.slide::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:var(--accent)}
+.kicker{font:600 13px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:20px}
+h1{font:650 76px/1.02 var(--sans);letter-spacing:-.035em;color:var(--t1)}
+h2{font:650 46px/1.12 var(--sans);letter-spacing:-.025em;color:var(--t1);margin-bottom:26px}
+p{font-size:21px;line-height:1.55;max-width:62ch}
+.lead{font-size:26px;line-height:1.45;color:var(--t2);margin-top:22px;max-width:60ch}
+.dim{color:var(--t3)}
+code,.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.accent{color:var(--accent)} .ok{color:var(--ok)}
+.foot{position:absolute;left:88px;right:88px;bottom:38px;display:flex;justify-content:space-between;
+  font:500 13px var(--mono);color:var(--t3);letter-spacing:.05em;border-top:1px solid var(--line);padding-top:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:8px}
+.card{background:var(--panel);border:1px solid var(--line);padding:26px 28px}
+.card h3{font:600 15px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin-bottom:14px}
+.card p{font-size:18px;line-height:1.5}
+.big{font:650 62px/1 var(--sans);letter-spacing:-.03em;color:var(--t1);font-variant-numeric:tabular-nums}
+.big.dead{color:var(--accent)} .big.alive{color:var(--ok)}
+.unit{font-size:20px;color:var(--t3);margin-left:8px;font-weight:500}
+.rows{margin-top:20px;border-top:1px solid var(--line)}
+.row{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);font-size:17px}
+.row span:first-child{color:var(--t3)}
+.row span:last-child{font-family:var(--mono);color:var(--t1)}
+pre{background:var(--well);border:1px solid var(--line);padding:22px 26px;font-family:var(--mono);
+  font-size:17px;line-height:1.65;color:var(--t2);overflow:hidden;margin-top:8px}
+pre b{color:var(--accent);font-weight:600}
+pre .g{color:var(--ok)}
+ul{list-style:none;margin-top:18px}
+li{font-size:20px;line-height:1.5;padding-left:26px;position:relative;margin-bottom:14px;max-width:60ch}
+li::before{content:"";position:absolute;left:0;top:11px;width:10px;height:2px;background:var(--accent)}
+.mark{position:absolute;top:64px;right:88px}
+.center{justify-content:center}
+table{border-collapse:collapse;width:100%;margin-top:10px;font-size:16px}
+th{text-align:left;font:600 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--t3);
+  padding:10px 14px;background:var(--panel-hi);border:1px solid var(--line)}
+td{padding:11px 14px;border:1px solid var(--line);font-family:var(--mono);color:var(--t2);font-size:15px}
+td.name{font-family:var(--sans);color:var(--t1)}
+</style></head><body>
+
+<!-- 1 TITLE -->
+<section class="slide center">
+  <svg class="mark" width="52" height="52" viewBox="0 0 24 24"><g fill="#ff3b41"><rect x="3" y="9" width="4.5" height="6"/><rect x="7.5" y="10.5" width="9" height="3"/><rect x="16.5" y="3" width="4.5" height="7.5"/><rect x="16.5" y="13.5" width="4.5" height="7.5"/></g></svg>
+  <div class="kicker">BUIDL CTC 2026 · Attestcoin Protocol</div>
+  <h1>Deadswitch</h1>
+  <p class="lead">The position dies when the collateral leaves.<br>
+  Collateral on Ethereum, debt on Creditcoin, proven by an Attestcoin receipt from the source chain.</p>
+  <p class="lead dim" style="font-size:20px">No bridge. No relayer. No price feed.</p>
+  <div class="foot"><span>nuel-osas.github.io/deadswitch</span><span>github.com/Nuel-osas/deadswitch</span></div>
+</section>
+
+<!-- 2 PROBLEM -->
+<section class="slide">
+  <div class="kicker">The problem</div>
+  <h2>Cross-chain lending has to answer one question.</h2>
+  <p style="font-size:25px;line-height:1.5">Is the collateral still there?</p>
+  <p class="lead">Every design today answers it with a trusted third party: a bridge, an oracle committee, or a relayer. That party becomes both the thing you have to trust and the thing that gets attacked.</p>
+  <ul>
+    <li>A bridge moves value. It cannot tell you whether collateral moved.</li>
+    <li>An oracle committee can report it, but then the loan rests on the committee.</li>
+    <li>A price feed prices the asset. It does not prove the asset is present.</li>
+  </ul>
+  <div class="foot"><span>Deadswitch</span><span>02</span></div>
+</section>
+
+<!-- 3 MECHANISM -->
+<section class="slide">
+  <div class="kicker">How it works</div>
+  <h2>The vault never blocks a withdrawal. It logs it.</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3>Ethereum Sepolia</h3>
+      <p><code>CollateralVault.withdraw()</code> emits <code>CollateralWithdrawn(positionId, amount, remaining)</code>.</p>
+      <p style="margin-top:14px" class="dim">The vault cannot know the debt. It guarantees only that every withdrawal is provable.</p>
+    </div>
+    <div class="card">
+      <h3>Creditcoin CC3</h3>
+      <p>Anyone submits an inclusion and continuity proof to <code>DeadswitchManagerV3.execute()</code>.</p>
+      <p style="margin-top:14px" class="dim">The <code>0x0FD2</code> precompile verifies it synchronously, in that same transaction. Below threshold, the position liquidates.</p>
+    </div>
+  </div>
+  <p class="lead" style="font-size:21px;margin-top:26px">Proof submission is permissionless. Trust comes from the attestor quorum, not from whoever submitted it.</p>
+  <div class="foot"><span>Deadswitch</span><span>03</span></div>
+</section>
+
+<!-- 4 THE KILL -->
+<section class="slide">
+  <div class="kicker">Live on testnet</div>
+  <h2>Position #3, killed by the keeper.</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3>Collateral, Sepolia</h3>
+      <div class="big">40<span class="unit">TST</span></div>
+      <div class="rows">
+        <div class="row"><span>Before</span><span>100 TST</span></div>
+        <div class="row"><span>Withdrawn</span><span>60 TST</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Position, Creditcoin</h3>
+      <div class="big dead">Liquidated</div>
+      <div class="rows">
+        <div class="row"><span>Threshold</span><span>50 TST</span></div>
+        <div class="row"><span>Attested</span><span>40 TST</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="lead dim" style="font-size:17px;margin-top:24px">Verified on Blockscout. <code>0xd149012c…78d6</code> decodes to <code>CollateralAttested(3, 40.0)</code> and <code>PositionLiquidated(3, 40.0, 50.0)</code>. No human in the loop.</p>
+  <div class="foot"><span>Deadswitch</span><span>04</span></div>
+</section>
+
+<!-- 5 FINDING A -->
+<section class="slide">
+  <div class="kicker">What we found · Finding A</div>
+  <h2>The replay key omits <code style="font-size:38px">action</code>.</h2>
+  <pre>queryId = keccak256(chainKey, blockHeight, txIndex)
+                                     <b>// action is not in it</b>
+processedQueries[queryId] = true;    <b>// burned before dispatch</b></pre>
+  <p class="lead" style="font-size:20px">One transaction carrying a deposit and a withdrawal, submitted as a deposit, makes the withdrawal permanently unprovable.</p>
+  <pre style="margin-top:20px">v2  submitted as action=1  ->  attested 100.000000000000000001, <span class="g">ACTIVE</span>
+v2  same tx as action=0    ->  <b>reverts "Query already processed"</b>
+    the collateral is gone; the position reports healthy, forever</pre>
+  <div class="foot"><span>Sepolia 0x979a5719… · filed as gluwa/USC-Builder-Examples#37</span><span>05</span></div>
+</section>
+
+<!-- 6 FINDING B -->
+<section class="slide">
+  <div class="kicker">What we found · Finding B</div>
+  <h2>The guard becomes the weapon.</h2>
+  <p class="lead" style="font-size:21px">Consumers read <code>logs[0]</code> and revert on the emitter check. Prefix a decoy event from a throwaway contract in the same transaction, and the genuine withdrawal can never be processed.</p>
+  <div class="grid2" style="margin-top:26px">
+    <div class="card">
+      <h3>The guard holds</h3>
+      <p>A forged event from a fake vault bounces off with <code>"Event not emitted by registered vault"</code>.</p>
+    </div>
+    <div class="card">
+      <h3>The same guard kills</h3>
+      <p>A decoy log at index 0 makes that same string reject the real withdrawal, permanently.</p>
+    </div>
+  </div>
+  <p class="lead dim" style="font-size:18px;margin-top:22px">A guard that rejects a whole transaction because of one log it does not own is a denial-of-service primitive.</p>
+  <div class="foot"><span>Sepolia 0x6f88a998… · both reproducible with <code>yarn attack</code></span><span>06</span></div>
+</section>
+
+<!-- 7 THE FIX -->
+<section class="slide">
+  <div class="kicker">The fix</div>
+  <h2>DeadswitchBase.sol</h2>
+  <ul>
+    <li><b class="accent">Action derived from each log's <code>topics[0]</code></b>, never trusted from the caller. A submitter cannot choose which half of a transaction is seen.</li>
+    <li><b class="accent">Every log from the registered vault applied, in log order.</b> One transaction with a deposit and a withdrawal produces both transitions, correctly sequenced.</li>
+    <li><b class="accent">Foreign logs skipped, never reverted on.</b> A decoy cannot censor a genuine event.</li>
+    <li><b class="accent"><code>blockHeight</code> threaded into the handler</b> and stored per position, so a stale proof cannot overwrite newer attested state.</li>
+  </ul>
+  <p class="lead dim" style="font-size:18px;margin-top:20px">Both attacks were re-run against v3 on live chains. Both positions liquidated correctly.</p>
+  <div class="foot"><span>Deadswitch</span><span>07</span></div>
+</section>
+
+<!-- 8 EVIDENCE -->
+<section class="slide">
+  <div class="kicker">Evidence</div>
+  <h2>Everything is on public testnets.</h2>
+  <table>
+    <tr><th>Contract</th><th>Chain</th><th>Address</th></tr>
+    <tr><td class="name">DeadswitchManagerV3</td><td>Creditcoin CC3</td><td>0x44e2d55Af74f400b97fBC010Acd504A1458bA682</td></tr>
+    <tr><td class="name">CollateralVault</td><td>Sepolia</td><td>0x80366d27b907828A36243140ce6ACED6350EE412</td></tr>
+    <tr><td class="name">NaiveManager (control)</td><td>Creditcoin CC3</td><td>0x9EdeA943Bc77caF9cB892077575E2d7E7f2B5142</td></tr>
+  </table>
+  <ul style="margin-top:26px">
+    <li>Current CC3 contracts are source-verified on Blockscout. Every event decodes publicly.</li>
+    <li>Both findings filed upstream: <code>gluwa/USC-Builder-Examples#37</code></li>
+    <li>Clone and run: <code>yarn install && yarn server</code>. Position #4 is staged live.</li>
+  </ul>
+  <div class="foot"><span>Deadswitch</span><span>08</span></div>
+</section>
+
+<!-- 9 SCOPE / CLOSE -->
+<section class="slide center">
+  <svg class="mark" width="52" height="52" viewBox="0 0 24 24"><g fill="#ff3b41"><rect x="3" y="9" width="4.5" height="6"/><rect x="7.5" y="10.5" width="9" height="3"/><rect x="16.5" y="3" width="4.5" height="7.5"/><rect x="16.5" y="13.5" width="4.5" height="7.5"/></g></svg>
+  <div class="kicker">Scope, stated plainly</div>
+  <h2 style="font-size:38px">One collateral asset. One source chain.<br>Liquidation and restore.</h2>
+  <p class="lead" style="font-size:20px">Positions are owner-registered. There is no lender market, no interest accrual, no auctions. What we are submitting is the trust-minimised liquidation primitive, and the security work around it.</p>
+  <p class="lead accent" style="font-size:22px;margin-top:30px">nuel-osas.github.io/deadswitch</p>
+  <div class="foot"><span>Deadswitch · BUIDL CTC 2026</span><span>09</span></div>
+</section>
+
+<style>.slide:last-of-type{break-after:auto;page-break-after:auto}</style>
+</body></html>
