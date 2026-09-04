@@ -1,5 +1,6 @@
 import LandingEnhancements from './LandingEnhancements';
 import Mark from './Mark';
+import Motion from './Motion';
 
 export default function Home() {
   return (
@@ -923,6 +924,7 @@ export default function Home() {
 
       <span id="copy-status" role="status" aria-live="polite" className="sr-only"></span>
       <LandingEnhancements />
+      <Motion />
     </>
   );
 }

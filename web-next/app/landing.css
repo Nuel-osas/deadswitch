@@ -857,3 +857,107 @@ a.addr:active { color: var(--accent-press); border-bottom-color: var(--accent-pr
   font-size: var(--t-caption); color: var(--text-3);
 }
 @media (max-width: 520px) { .footcol ul { gap: 10px var(--s4); } }
+/* ============================================================================
+   MOTION
+   Progressive enhancement only. The page is complete without any of this, and
+   the whole layer is inert under prefers-reduced-motion — which the OS setting
+   and the .motion-off guard both enforce.
+   ========================================================================== */
+
+/* ---- scroll reveal ---- */
+.motion-on .reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  will-change: opacity, transform;
+}
+.motion-on .reveal.is-in {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 620ms cubic-bezier(0.22, 0.61, 0.36, 1) var(--reveal-delay, 0ms),
+    transform 620ms cubic-bezier(0.22, 0.61, 0.36, 1) var(--reveal-delay, 0ms);
+}
+
+/* ---- hero: the panel performs the liquidation ---- */
+.motion-on .hero__panel {
+  transition: border-color 420ms ease, box-shadow 420ms ease;
+}
+/* the instant the proof lands */
+.motion-on .hero__panel.is-firing {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-line), 0 0 44px -12px var(--accent-edge);
+  animation: ds-fire 900ms cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+@keyframes ds-fire {
+  0%   { box-shadow: 0 0 0 1px var(--accent-line), 0 0 0 -12px var(--accent-edge); }
+  35%  { box-shadow: 0 0 0 1px var(--accent), 0 0 60px -6px var(--accent-edge); }
+  100% { box-shadow: 0 0 0 1px var(--accent-line), 0 0 44px -12px var(--accent-edge); }
+}
+.motion-on .hero__panel.is-dead {
+  border-color: var(--accent-quiet);
+}
+
+/* the status cell, when it flips */
+.stat__value--alive { color: var(--ok); }
+.motion-on .stat__value--state {
+  transition: color 320ms ease;
+}
+.motion-on .stat__value--dead.is-struck {
+  animation: ds-strike 620ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes ds-strike {
+  0%   { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  55%  { opacity: 1; transform: translateY(0) scale(1.04); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* counting figures should not reflow the row as digits are added */
+.stat__value { font-variant-numeric: tabular-nums slashed-zero; }
+
+/* ---- cards lift a little on hover ---- */
+.motion-on .finding-card,
+.motion-on .panel {
+  transition: transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1), border-color 260ms ease;
+}
+.motion-on .finding-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+}
+
+/* ---- diagrams draw their proof path ---- */
+.motion-on .diagram-frame svg path,
+.motion-on .diagram-frame svg line {
+  stroke-dasharray: var(--dash, 260);
+  stroke-dashoffset: var(--dash, 260);
+}
+.motion-on .diagram-frame svg.is-drawn path,
+.motion-on .diagram-frame svg.is-drawn line {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 900ms cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+/* filled shapes must not be hidden by the dash trick */
+.motion-on .diagram-frame svg rect,
+.motion-on .diagram-frame svg text,
+.motion-on .diagram-frame svg circle {
+  stroke-dasharray: none;
+  stroke-dashoffset: 0;
+}
+
+/* ---- nav gains a hairline once you leave the hero ---- */
+.motion-on .shell-nav { transition: background-color 240ms ease, border-color 240ms ease; }
+
+/* ---- the accent underline on links, drawn rather than switched ---- */
+.motion-on .link {
+  background-image: linear-gradient(var(--accent), var(--accent));
+  background-size: 0% 1px;
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  transition: background-size 240ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.motion-on .link:hover { background-size: 100% 1px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .reveal.is-in { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .hero__panel, .stat__value--state, .finding-card, .panel, .link { animation: none !important; transition: none !important; }
+  .diagram-frame svg path, .diagram-frame svg line { stroke-dasharray: none !important; stroke-dashoffset: 0 !important; }
+}
