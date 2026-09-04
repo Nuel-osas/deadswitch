@@ -574,7 +574,7 @@ export default function Home() {
               </li>
             </ol>
 
-            <p className="ledger-note">Both findings are written up in full in <a className="link" href="https://github.com/Nuel-osas/deadswitch/blob/main/SECURITY.md"><code>SECURITY.md</code></a>, with the file and line references on both sides. They are prepared for upstream disclosure to <code>gluwa/USC-Builder-Examples</code> and filed upstream rather than filed as a public issue while judging is open.</p>
+            <p className="ledger-note">Both findings are written up in full in <a className="link" href="https://github.com/Nuel-osas/deadswitch/blob/main/SECURITY.md"><code>SECURITY.md</code></a>, with the file and line references on both sides. They are <a className="link" href="https://github.com/gluwa/USC-Builder-Examples/issues/37">filed upstream as <code>gluwa/USC-Builder-Examples#37</code></a>, publicly and with both reproductions, because the affected code is public example code rather than a deployed protocol with funds at risk.</p>
           </div>
         </section>
 

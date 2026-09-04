@@ -56,6 +56,9 @@ Sepolia                                Creditcoin
 
 ## Hardening the 0x0FD2 trust boundary
 
+Both findings below are filed upstream as
+[gluwa/USC-Builder-Examples#37](https://github.com/gluwa/USC-Builder-Examples/issues/37).
+
 Gluwa's loan tutorial already teaches emitter authentication and receipt-status checking —
 `USCLoanManager.sol:240` and `:267`, added in PR #92 (`4ff9a3b`, 2026-07-29). Deadswitch adopts
 all ten of those guards. What it adds is below.
